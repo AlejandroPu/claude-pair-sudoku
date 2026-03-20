@@ -8,6 +8,8 @@ Development took place during the afternoon of **March 20, 2026**.
 
 The present document has been written by **"ChatGPT 5.4 extended thinking"**.
 
+A live version of the project can be tested at: https://alejandropu.github.io/claude-pair-sudoku/
+
 What follows is the account of how the entire project was developed.
 
 # Technical record of the development of a 6 × 6 Sudoku
