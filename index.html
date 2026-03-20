@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku 6×6</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f0e8; --paper:#fdfaf4; --ink:#1a1208; --line:#c8b89a;
+  --box:#6b4f2a; --user:#3a5fa0; --error:#c0392b; --ok:#27ae60;
+  --hi:#e8dfc8; --shadow:rgba(100,70,20,.15); --accent:#8b5e2a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(ellipse at 20% 20%,#e8d9be,transparent 60%),
+                   radial-gradient(ellipse at 80% 80%,#d4c5a0,transparent 55%);
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:2rem;
+  font-family:'DM Mono',monospace;
+}
+header{text-align:center;margin-bottom:1.5rem;animation:fadeDown .6s ease both}
+header h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3rem);
+  color:var(--ink);letter-spacing:-1px}
+header p{color:var(--accent);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;margin-top:.4rem}
+
+.card{background:var(--paper);border-radius:16px;padding:1.75rem 2.25rem 2.25rem;
+  box-shadow:0 2px 4px var(--shadow),0 8px 24px var(--shadow),0 0 0 1px rgba(100,70,20,.08);
+  animation:fadeUp .7s ease .1s both;width:min(430px,95vw)}
+
+.diff-row{display:flex;align-items:center;gap:.5rem;justify-content:center;margin-bottom:1.25rem}
+.diff-row label{font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent)}
+#diff-label{font-size:.78rem;color:var(--ink);font-weight:500;letter-spacing:.05em}
+
+/* ── GRID ── */
+#grid{display:grid;grid-template-columns:repeat(6,1fr);
+  border:2.5px solid var(--box);border-radius:6px;overflow:hidden;
+  width:min(340px,82vw);height:min(340px,82vw);margin:0 auto}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);background:var(--paper);cursor:pointer;transition:background .15s}
+.cell:hover:not(.given){background:var(--hi)}
+.cell.active{background:#dff0ff}
+.cell.hilite{background:#f0ede5}
+.cell[data-col="2"]{border-right:2.5px solid var(--box)}
+.cell[data-row="1"]{border-bottom:2.5px solid var(--box)}
+.cell[data-row="3"]{border-bottom:2.5px solid var(--box)}
+.cell input{position:absolute;inset:0;width:100%;height:100%;border:none;
+  background:transparent;text-align:center;font-family:'DM Mono',monospace;
+  font-size:clamp(1rem,3.5vw,1.4rem);font-weight:500;color:var(--user);
+  cursor:pointer;outline:none;caret-color:transparent}
+.cell.given input{color:var(--ink);cursor:default;pointer-events:none}
+.cell.error{background:#fde8e8}.cell.error input{color:var(--error)}
+.cell.correct input{color:var(--ok)}
+
+/* ── SEARCH STATUS INLINE ── */
+.inline-status{text-align:center;margin-top:1.25rem;min-height:1.6rem;
+  font-size:.75rem;color:var(--accent);letter-spacing:.07em}
+
+/* ── ACTIONS ── */
+.actions{display:flex;gap:.75rem;justify-content:center;margin-top:1.25rem}
+.btn{padding:.55rem 1.4rem;border-radius:8px;border:1.5px solid var(--box);
+  font-family:'DM Mono',monospace;font-size:.75rem;font-weight:500;
+  letter-spacing:.05em;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--box);color:#fdfaf4}
+.btn-primary:hover{background:#7a4520;transform:translateY(-1px)}
+.btn-secondary{background:transparent;color:var(--accent)}
+.btn-secondary:hover{background:var(--hi)}
+
+#message{text-align:center;margin-top:1rem;min-height:1.5rem;
+  font-size:.8rem;font-weight:500;letter-spacing:.05em}
+.msg-error{color:var(--error)}.msg-ok{color:var(--ok)}
+
+/* ── CODE ROW ── */
+.code-row{display:flex;align-items:center;gap:.45rem;margin-top:1.1rem;
+  padding:.7rem .9rem;background:var(--hi);border-radius:10px;
+  border:1px solid var(--line)}
+.code-lbl{font-size:.6rem;color:var(--accent);letter-spacing:.14em;
+  text-transform:uppercase;white-space:nowrap;margin-right:.1rem}
+#code-input{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;
+  background:var(--paper);font-family:'DM Mono',monospace;font-size:.7rem;
+  color:var(--ink);padding:.32rem .45rem;outline:none;letter-spacing:.04em;
+  transition:border-color .15s}
+#code-input:focus{border-color:var(--accent)}
+#code-input.invalid{border-color:var(--error);color:var(--error)}
+.code-btn{flex-shrink:0;padding:.32rem .6rem;border-radius:6px;
+  border:1.5px solid var(--line);background:var(--paper);
+  font-family:'DM Mono',monospace;font-size:.68rem;font-weight:500;
+  color:var(--accent);cursor:pointer;transition:all .15s}
+.code-btn:hover{background:var(--paper);border-color:var(--accent);
+  transform:translateY(-1px)}
+.code-btn.copied{border-color:var(--ok);color:var(--ok)}
+
+/* ── METRICS PANEL ── */
+.metrics-panel{overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .45s ease,opacity .35s ease;margin-top:0}
+.metrics-panel.visible{max-height:420px;opacity:1;margin-top:1.5rem}
+
+.mp-divider{border:none;border-top:1px solid var(--line);margin-bottom:1.25rem}
+
+.score-row{display:flex;align-items:baseline;justify-content:center;gap:.7rem;margin-bottom:1.1rem}
+.score-num{font-family:'Playfair Display',serif;font-size:2.4rem;color:var(--ink);line-height:1;
+  transition:color .4s}
+.score-badge{font-size:.7rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  padding:.22rem .7rem;border-radius:20px;transition:all .4s;border:1.5px solid}
+
+.metrics-rows{display:flex;flex-direction:column;gap:.55rem;margin-bottom:.9rem}
+.mrow{display:grid;grid-template-columns:130px 1fr 58px 50px;align-items:center;gap:.45rem}
+.mname{font-size:.68rem;color:var(--accent);letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-wrap{background:var(--hi);border-radius:4px;height:9px;overflow:hidden;
+  border:1px solid var(--line)}
+.bar{height:100%;border-radius:4px;width:0;transition:width .55s ease}
+.mval{text-align:right;color:var(--ink);font-weight:500;font-size:.72rem}
+.mpts{text-align:right;color:var(--accent);font-size:.63rem}
+
+.search-status{text-align:center;font-size:.71rem;color:var(--accent);
+  letter-spacing:.08em;min-height:1.2em}
+.blink{animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,18,8,.45);
+  backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;
+  z-index:20;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.visible{opacity:1;pointer-events:all}
+.modal{background:var(--paper);border-radius:16px;padding:2rem 2.5rem;text-align:center;
+  box-shadow:0 16px 48px rgba(0,0,0,.2);transform:translateY(12px) scale(.97);
+  transition:transform .25s;max-width:340px;width:90%}
+.modal-overlay.visible .modal{transform:translateY(0) scale(1)}
+.modal h2{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--ink);margin-bottom:.4rem}
+.modal-sub{font-size:.73rem;color:var(--accent);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:1.4rem}
+.modal-levels{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.25rem}
+.lvl-btn{display:flex;align-items:center;justify-content:space-between;
+  padding:.72rem 1.1rem;border-radius:10px;border:1.5px solid var(--line);
+  background:transparent;cursor:pointer;font-family:'DM Mono',monospace;
+  transition:all .15s;color:var(--ink)}
+.lvl-btn:hover{background:var(--hi);border-color:var(--accent)}
+.lvl-btn.active{background:var(--box);border-color:var(--box);color:#fdfaf4}
+.lvl-btn .lname{font-size:.85rem;font-weight:500}
+.lvl-btn .ldesc{font-size:.68rem;opacity:.65}
+.lvl-dots{display:flex;gap:3px}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.22}
+.dot.on{opacity:1}
+
+/* Máxima expand */
+.max-expand{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.max-expand.open{max-height:180px}
+.intensity-block{background:var(--hi);border-radius:10px;padding:1rem 1.1rem;
+  margin-top:.6rem;text-align:left}
+.intensity-block > label{font-size:.68rem;color:var(--accent);letter-spacing:.1em;
+  text-transform:uppercase;display:block;margin-bottom:.75rem}
+.int-row{display:flex;flex-direction:column;gap:.45rem}
+.int-row input[type=range]{width:100%;appearance:none;height:4px;
+  background:var(--line);border-radius:2px;outline:none}
+.int-row input[type=range]::-webkit-slider-thumb{appearance:none;
+  width:16px;height:16px;border-radius:50%;background:var(--box);cursor:pointer}
+.int-val{font-size:.82rem;font-weight:500;color:var(--ink);text-align:center}
+.btn-gen{width:100%;margin-top:.75rem;padding:.65rem;border-radius:8px;border:none;
+  background:var(--box);color:#fdfaf4;font-family:'DM Mono',monospace;
+  font-size:.78rem;font-weight:500;letter-spacing:.05em;cursor:pointer;transition:all .15s}
+.btn-gen:hover{background:#7a4520}
+
+.modal-cancel{background:none;border:none;font-family:'DM Mono',monospace;
+  font-size:.72rem;color:var(--accent);cursor:pointer;letter-spacing:.1em;
+  text-transform:uppercase;text-decoration:underline;opacity:.7}
+.modal-cancel:hover{opacity:1}
+
+/* ── ANIMS ── */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes pulse{0%{filter:brightness(1)}50%{filter:brightness(1.5)}100%{filter:brightness(1)}}
+
+.pop{animation:pop .25s ease}
+.grid-refresh{animation:shimmer .35s ease}
+.bar-pulse{animation:pulse .45s ease}
+
+#confetti{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;display:none}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>Nuevo Sudoku</h2>
+    <p class="modal-sub">Elige la dificultad</p>
+    <div class="modal-levels">
+
+      <button class="lvl-btn" data-level="easy">
+        <span class="lname">Fácil</span>
+        <span class="lvl-dots"><span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+        <span class="ldesc">más pistas</span>
+      </button>
+
+      <button class="lvl-btn" data-level="medium">
+        <span class="lname">Medio</span>
+        <span class="lvl-dots"><span class="dot on"></span><span class="dot on"></span><span class="dot"></span><span class="dot"></span></span>
+        <span class="ldesc">equilibrado</span>
+      </button>
+
+      <button class="lvl-btn" data-level="hard">
+        <span class="lname">Difícil</span>
+        <span class="lvl-dots"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot"></span></span>
+        <span class="ldesc">pocas pistas</span>
+      </button>
+
+      <button class="lvl-btn" data-level="max" id="btn-max-level">
+        <span class="lname">Máxima</span>
+        <span class="lvl-dots"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span></span>
+        <span class="ldesc">búsqueda activa</span>
+      </button>
+    </div>
+
+    <div class="max-expand" id="max-expand">
+      <div class="intensity-block">
+        <label>Intentos de búsqueda</label>
+        <div class="int-row">
+          <input type="range" id="int-slider" min="5" max="4000" step="5" value="20">
+          <span class="int-val" id="int-display">20 intentos</span>
+        </div>
+        <button class="btn-gen" id="btn-gen-max">Buscar puzzle →</button>
+      </div>
+    </div>
+
+    <button class="modal-cancel" id="modal-cancel">cancelar</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<header>
+  <h1>Sudoku</h1>
+  <p>6 × 6 — grupos de 2×3</p>
+</header>
+
+<div class="card">
+  <div class="diff-row">
+    <label>Nivel:</label>
+    <span id="diff-label">Medio</span>
+  </div>
+
+  <div id="grid"></div>
+
+  <div class="inline-status" id="inline-status"></div>
+
+  <div class="actions">
+    <button class="btn btn-secondary" id="btn-hint">Pista</button>
+    <button class="btn btn-primary"   id="btn-check">Verificar</button>
+    <button class="btn btn-secondary" id="btn-reset">Reiniciar</button>
+  </div>
+
+  <div id="message"></div>
+
+  <!-- CODE ROW -->
+  <div class="code-row">
+    <span class="code-lbl">Código</span>
+    <input type="text" id="code-input" maxlength="17" spellcheck="false"
+           autocomplete="off" placeholder="—">
+    <button class="code-btn" id="btn-copy">Copy</button>
+    <button class="code-btn" id="btn-load">Load</button>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics-panel" id="mp">
+    <hr class="mp-divider">
+    <div class="score-row">
+      <span class="score-num" id="mp-score">—</span>
+      <span class="score-badge" id="mp-badge">—</span>
+    </div>
+
+    <div class="metrics-rows">
+      <!-- P -->
+      <div class="mrow" title="Pistas dadas: menos pistas = más difícil">
+        <span class="mname">Pistas dadas</span>
+        <div class="bar-wrap"><div class="bar" id="bar-P" style="background:#c8922a"></div></div>
+        <span class="mval" id="val-P">—</span>
+        <span class="mpts" id="pts-P">—</span>
+      </div>
+      <!-- S -->
+      <div class="mrow" title="Movimientos directos: celdas resolubles con lógica simple">
+        <span class="mname">Mov. directos</span>
+        <div class="bar-wrap"><div class="bar" id="bar-S" style="background:#3a5fa0"></div></div>
+        <span class="mval" id="val-S">—</span>
+        <span class="mpts" id="pts-S">—</span>
+      </div>
+      <!-- D -->
+      <div class="mrow" title="Profundidad de bifurcación: niveles de suposición necesarios">
+        <span class="mname">Profundidad</span>
+        <div class="bar-wrap"><div class="bar" id="bar-D" style="background:#7d3c98"></div></div>
+        <span class="mval" id="val-D">—</span>
+        <span class="mpts" id="pts-D">—</span>
+      </div>
+      <!-- C -->
+      <div class="mrow" title="Candidatos promedio por celda vacía: más candidatos = más ambigüedad">
+        <span class="mname">Cand. promedio</span>
+        <div class="bar-wrap"><div class="bar" id="bar-C" style="background:#148f77"></div></div>
+        <span class="mval" id="val-C">—</span>
+        <span class="mpts" id="pts-C">—</span>
+      </div>
+      <!-- M -->
+      <div class="mrow" title="Candidato mínimo: sin celdas fáciles al inicio">
+        <span class="mname">Cand. mínimo</span>
+        <div class="bar-wrap"><div class="bar" id="bar-M" style="background:#c0392b"></div></div>
+        <span class="mval" id="val-M">—</span>
+        <span class="mpts" id="pts-M">—</span>
+      </div>
+    </div>
+
+    <div class="search-status" id="mp-status"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  UTILIDADES
+// ══════════════════════════════════════════════
+
+const shuffle = a => {
+  const b=[...a];
+  for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}
+  return b;
+};
+
+function getCands(g,r,c){
+  const u=new Set();
+  for(let i=0;i<6;i++){if(g[r][i])u.add(g[r][i]);if(g[i][c])u.add(g[i][c]);}
+  const br=Math.floor(r/2)*2,bc=Math.floor(c/3)*3;
+  for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++)if(g[br+dr][bc+dc])u.add(g[br+dr][bc+dc]);
+  return[1,2,3,4,5,6].filter(n=>!u.has(n));
+}
+
+function isValid(g,r,c,v){
+  for(let i=0;i<6;i++){if(g[r][i]===v||g[i][c]===v)return false;}
+  const br=Math.floor(r/2)*2,bc=Math.floor(c/3)*3;
+  for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++)if(g[br+dr][bc+dc]===v)return false;
+  return true;
+}
+
+const isSolved=g=>{for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(!g[r][c])return false;return true;};
+const copy=g=>g.map(r=>[...r]);
+
+// ══════════════════════════════════════════════
+//  GENERADOR DE SOLUCIÓN + PUZZLE
+// ══════════════════════════════════════════════
+
+function fillGrid(g){
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(g[r][c])continue;
+    for(const n of shuffle([1,2,3,4,5,6])){
+      if(isValid(g,r,c,n)){g[r][c]=n;if(fillGrid(g))return true;g[r][c]=0;}
+    }
+    return false;
+  }
+  return true;
+}
+
+function countSols(g,lim){
+  let n=0;
+  (function bt(){
+    if(n>=lim)return;
+    for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+      if(g[r][c])continue;
+      for(let v=1;v<=6;v++){if(isValid(g,r,c,v)){g[r][c]=v;bt();g[r][c]=0;}}
+      return;
+    }
+    n++;
+  })();
+  return n;
+}
+
+const CLUES={easy:24,medium:18,hard:13};
+
+function generatePuzzle(mode){
+  const sol=Array.from({length:6},()=>Array(6).fill(0));
+  fillGrid(sol);
+  const puz=copy(sol);
+  const pos=shuffle(Array.from({length:36},(_,i)=>[i/6|0,i%6]));
+  const target=mode==='max'?0:36-CLUES[mode];
+  let removed=0;
+  for(const[r,c]of pos){
+    if(mode!=='max'&&removed>=target)break;
+    const bk=puz[r][c];puz[r][c]=0;
+    if(countSols(copy(puz),2)!==1)puz[r][c]=bk;else removed++;
+  }
+  return{solution:sol,puzzle:puz};
+}
+
+// ══════════════════════════════════════════════
+//  SOLVER LÓGICO (para métricas)
+// ══════════════════════════════════════════════
+
+// Aplica una ronda de naked + hidden singles. Devuelve true si hubo cambio.
+function logicStep(g){
+  let ch=false;
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(g[r][c])continue;
+    const ca=getCands(g,r,c);
+    if(ca.length===1){g[r][c]=ca[0];ch=true;}
+  }
+  for(let n=1;n<=6;n++){
+    for(let r=0;r<6;r++){
+      const cl=[];for(let c=0;c<6;c++)if(!g[r][c]&&getCands(g,r,c).includes(n))cl.push([r,c]);
+      if(cl.length===1){g[cl[0][0]][cl[0][1]]=n;ch=true;}
+    }
+    for(let c=0;c<6;c++){
+      const cl=[];for(let r=0;r<6;r++)if(!g[r][c]&&getCands(g,r,c).includes(n))cl.push([r,c]);
+      if(cl.length===1){g[cl[0][0]][cl[0][1]]=n;ch=true;}
+    }
+    for(let br=0;br<6;br+=2)for(let bc=0;bc<6;bc+=3){
+      const cl=[];
+      for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++){
+        const r=br+dr,c=bc+dc;
+        if(!g[r][c]&&getCands(g,r,c).includes(n))cl.push([r,c]);
+      }
+      if(cl.length===1){g[cl[0][0]][cl[0][1]]=n;ch=true;}
+    }
+  }
+  return ch;
+}
+
+function solveDepth(g,depth){
+  if(depth>4)return{ok:false,depth};
+  while(logicStep(g)){}
+  if(isSolved(g))return{ok:true,depth};
+  let minC=7,br=-1,bc=-1,bca=[];
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(g[r][c])continue;
+    const ca=getCands(g,r,c);
+    if(ca.length===0)return{ok:false,depth};
+    if(ca.length<minC){minC=ca.length;br=r;bc=c;bca=ca;}
+  }
+  if(br===-1)return{ok:false,depth};
+  for(const n of bca){
+    const t=copy(g);t[br][bc]=n;
+    const res=solveDepth(t,depth+1);
+    if(res.ok)return res;
+  }
+  return{ok:false,depth};
+}
+
+// ══════════════════════════════════════════════
+//  CÁLCULO DE MÉTRICAS
+// ══════════════════════════════════════════════
+
+function calcMetrics(puz){
+  // P — pistas dadas
+  let P=0;for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(puz[r][c])P++;
+
+  // S — celdas resolubles por naked/hidden single (sin duplicados)
+  const solv=new Set();
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(puz[r][c])continue;
+    if(getCands(puz,r,c).length===1)solv.add(`${r},${c}`);
+  }
+  for(let n=1;n<=6;n++){
+    for(let r=0;r<6;r++){
+      const cl=[];for(let c=0;c<6;c++)if(!puz[r][c]&&getCands(puz,r,c).includes(n))cl.push(`${r},${c}`);
+      if(cl.length===1)solv.add(cl[0]);
+    }
+    for(let c=0;c<6;c++){
+      const cl=[];for(let r=0;r<6;r++)if(!puz[r][c]&&getCands(puz,r,c).includes(n))cl.push(`${r},${c}`);
+      if(cl.length===1)solv.add(cl[0]);
+    }
+    for(let br=0;br<6;br+=2)for(let bc=0;bc<6;bc+=3){
+      const cl=[];
+      for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++){
+        const r=br+dr,c=bc+dc;
+        if(!puz[r][c]&&getCands(puz,r,c).includes(n))cl.push(`${r},${c}`);
+      }
+      if(cl.length===1)solv.add(cl[0]);
+    }
+  }
+  const S=solv.size;
+
+  // C, M — candidatos promedio y mínimo
+  let tot=0,minC=6,emp=0;
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(puz[r][c])continue;
+    const ca=getCands(puz,r,c);
+    tot+=ca.length;emp++;if(ca.length<minC)minC=ca.length;
+  }
+  const C=emp?Math.round(tot/emp*10)/10:0;
+  const M=emp?minC:0;
+
+  // D — profundidad de bifurcación
+  const D=solveDepth(copy(puz),0).depth;
+
+  return{P,S,D,C,M};
+}
+
+// ══════════════════════════════════════════════
+//  FÓRMULA DE PUNTUACIÓN
+// ══════════════════════════════════════════════
+//
+//  Componente  Peso  Máx. aporte
+//  ─────────── ────  ──────────
+//  P (pistas)   0.8    160
+//  S (singles)  1.2    240
+//  D (bifurc.)  1.5    300
+//  C (cand.p.)  0.8    160
+//  M (cand.m.)  0.7    140
+//               Total: 1000
+//
+// ══════════════════════════════════════════════
+
+const MAX_CONTRIB={P:160,S:240,D:300,C:160,M:140};
+
+function calcContribs(m){
+  const cP=Math.min(1,Math.max(0,(28-m.P)/18))*200;
+  const cS=Math.min(1,Math.max(0,Math.exp(-m.S*.2)))*200;
+  const cD=Math.min(1,Math.max(0,m.D/4))*200;
+  const cC=Math.min(1,Math.max(0,(m.C-1)/4))*200;
+  const cM=Math.min(1,Math.max(0,(m.M-1)/4))*200;
+  return{
+    P:Math.round(cP*.8),
+    S:Math.round(cS*1.2),
+    D:Math.round(cD*1.5),
+    C:Math.round(cC*.8),
+    M:Math.round(cM*.7)
+  };
+}
+
+function calcScore(m){
+  const c=calcContribs(m);
+  return Math.min(1000,Math.max(0,c.P+c.S+c.D+c.C+c.M));
+}
+
+const BANDS=[
+  {max:150, label:'Principiante', color:'#27ae60'},
+  {max:350, label:'Intermedio',   color:'#2471a3'},
+  {max:550, label:'Avanzado',     color:'#7d3c98'},
+  {max:750, label:'Experto',      color:'#d68910'},
+  {max:1000,label:'Extremo',      color:'#c0392b'},
+];
+const getBand=s=>BANDS.find(b=>s<=b.max)||BANDS[BANDS.length-1];
+
+// ══════════════════════════════════════════════
+//  ESTADO DEL JUEGO
+// ══════════════════════════════════════════════
+
+let curDiff='medium',SOLUTION,PUZZLE,state,selected,searching=false;
+
+async function newGame(diff,maxAttempts=1){
+  if(searching)return;
+  curDiff=diff;selected=null;
+  const mp=document.getElementById('mp');
+
+  if(diff==='max'){
+    searching=true;
+    mp.classList.add('visible');
+    showMsg('Buscando puzzle óptimo…','ok');
+    setStatus('Iniciando búsqueda<span class="blink">…</span>');
+    resetBars();
+
+    let best=null,bestScore=-1;
+    for(let att=1;att<=maxAttempts;att++){
+      const gen=generatePuzzle('max');
+      const metrics=calcMetrics(gen.puzzle);
+      const score=calcScore(metrics);
+      const isBest=score>bestScore;
+      if(isBest){
+        bestScore=score;best={...gen,metrics,score};
+        SOLUTION=gen.solution;PUZZLE=gen.puzzle;
+        state=PUZZLE.map(r=>[...r]);
+        renderGrid();
+        updateCodeInput();
+      }
+      updateMP(best.metrics,best.score,att,maxAttempts,isBest);
+      if(att<maxAttempts)setStatus(`Intento ${att} / ${maxAttempts}<span class="blink">…</span>`);
+      await new Promise(r=>setTimeout(r,8));
+    }
+
+    searching=false;
+    const band=getBand(bestScore);
+    setStatus(`Mejor puzzle encontrado · ${maxAttempts} intento${maxAttempts!==1?'s':''}`);
+    document.getElementById('diff-label').textContent=`Máxima — ${band.label}`;
+    clearMsg();
+
+  }else{
+    mp.classList.remove('visible');
+    document.getElementById('inline-status').innerHTML='';
+    showMsg('Generando…','ok');
+    await new Promise(r=>setTimeout(r,30));
+    const gen=generatePuzzle(diff);
+    SOLUTION=gen.solution;PUZZLE=gen.puzzle;
+    state=PUZZLE.map(r=>[...r]);
+    renderGrid();
+    updateCodeInput();
+    document.getElementById('diff-label').textContent=
+      {easy:'Fácil',medium:'Medio',hard:'Difícil'}[diff];
+    clearMsg();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  ACTUALIZACIÓN DEL PANEL DE MÉTRICAS
+// ══════════════════════════════════════════════
+
+function resetBars(){
+  ['P','S','D','C','M'].forEach(k=>{
+    document.getElementById('bar-'+k).style.width='0%';
+    document.getElementById('val-'+k).textContent='—';
+    document.getElementById('pts-'+k).textContent='—';
+  });
+  document.getElementById('mp-score').textContent='—';
+  document.getElementById('mp-badge').textContent='—';
+}
+
+function updateMP(m,score,att,max,isBest){
+  const c=calcContribs(m);
+  const band=getBand(score);
+
+  // Score numérico + badge
+  document.getElementById('mp-score').textContent=score;
+  const badge=document.getElementById('mp-badge');
+  badge.textContent=band.label;
+  badge.style.background=band.color+'1a';
+  badge.style.color=band.color;
+  badge.style.borderColor=band.color+'66';
+
+  // Filas de métricas
+  const rows=[
+    {k:'P',val:`${m.P} dadas`,pts:c.P},
+    {k:'S',val:`${m.S} cel.`, pts:c.S},
+    {k:'D',val:`${m.D} niv.`, pts:c.D},
+    {k:'C',val:String(m.C),   pts:c.C},
+    {k:'M',val:`mín. ${m.M}`, pts:c.M},
+  ];
+  for(const{k,val,pts}of rows){
+    const pct=(c[k]/MAX_CONTRIB[k]*100).toFixed(1);
+    const bar=document.getElementById('bar-'+k);
+    bar.style.width=pct+'%';
+    document.getElementById('val-'+k).textContent=val;
+    document.getElementById('pts-'+k).textContent='+'+pts+'pts';
+    if(isBest){bar.classList.remove('bar-pulse');void bar.offsetWidth;bar.classList.add('bar-pulse');}
+  }
+}
+
+function setStatus(html){
+  document.getElementById('mp-status').innerHTML=html;
+  document.getElementById('inline-status').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+//  TABLERO
+// ══════════════════════════════════════════════
+
+const gridEl=document.getElementById('grid');
+
+function renderGrid(){
+  gridEl.innerHTML='';
+  gridEl.classList.remove('grid-refresh');void gridEl.offsetWidth;gridEl.classList.add('grid-refresh');
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    const given=PUZZLE[r][c]!==0;
+    const cell=document.createElement('div');
+    cell.className='cell'+(given?' given':'');
+    cell.dataset.row=r;cell.dataset.col=c;
+    const inp=document.createElement('input');
+    inp.type='text';inp.readOnly=true;inp.inputMode='numeric';inp.maxLength=1;
+    inp.value=given?PUZZLE[r][c]:'';
+    cell.appendChild(inp);
+    if(!given)cell.addEventListener('click',()=>{selected={row:r,col:c};highlight();});
+    gridEl.appendChild(cell);
+  }
+}
+
+const getCell=(r,c)=>gridEl.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+
+function highlight(){
+  gridEl.querySelectorAll('.cell').forEach(el=>el.classList.remove('active','hilite'));
+  if(!selected)return;
+  const{row,col}=selected;
+  gridEl.querySelectorAll('.cell').forEach(el=>{
+    const r=+el.dataset.row,c=+el.dataset.col;
+    if(r===row&&c===col)el.classList.add('active');
+    else if(r===row||c===col)el.classList.add('hilite');
+  });
+}
+
+// ══════════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════════
+
+function enter(v){
+  if(!selected||!SOLUTION)return;
+  const{row,col}=selected;
+  if(PUZZLE[row][col])return;
+  state[row][col]=v;
+  const cell=getCell(row,col);
+  cell.querySelector('input').value=v||'';
+  cell.classList.remove('error','correct');
+  clearMsg();
+  cell.classList.remove('pop');void cell.offsetWidth;cell.classList.add('pop');
+  // Auto-check when every empty cell has been filled
+  const allFilled=state.every((row,r)=>row.every((v,c)=>PUZZLE[r][c]||v));
+  if(allFilled) check();
+}
+
+document.addEventListener('keydown',e=>{
+  if(document.activeElement.id==='code-input')return;
+  if(!selected)return;
+  const n=parseInt(e.key);
+  if(n>=1&&n<=6){enter(n);return;}
+  if(['Backspace','Delete','0'].includes(e.key)){enter(0);return;}
+  const dirs={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+  if(dirs[e.key]){
+    const[dr,dc]=dirs[e.key];
+    const nr=selected.row+dr,nc=selected.col+dc;
+    if(nr>=0&&nr<6&&nc>=0&&nc<6){selected={row:nr,col:nc};highlight();}
+  }
+});
+
+// ══════════════════════════════════════════════
+//  VERIFICAR / PISTA
+// ══════════════════════════════════════════════
+
+function check(){
+  if(!SOLUTION)return;
+  let err=false,done=true;
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(PUZZLE[r][c])continue;
+    const cell=getCell(r,c);const v=state[r][c];
+    cell.classList.remove('error','correct');
+    if(!v){done=false;continue;}
+    if(v!==SOLUTION[r][c]){cell.classList.add('error');err=true;}
+    else cell.classList.add('correct');
+  }
+  if(err)showMsg('Hay errores. ¡Sigue intentando!','error');
+  else if(!done)showMsg('Sin errores hasta ahora. ¡Continúa!','ok');
+  else{showMsg('¡Felicidades! Puzzle completado 🎉','ok');confetti();}
+}
+
+function hint(){
+  if(!SOLUTION)return;
+  const emp=[];
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(!PUZZLE[r][c]&&!state[r][c])emp.push({r,c});
+  if(!emp.length){showMsg('El tablero ya está completo.','ok');return;}
+  const{r,c}=emp[0|Math.random()*emp.length];
+  selected={row:r,col:c};enter(SOLUTION[r][c]);highlight();
+  showMsg('Pista revelada ✦','ok');
+}
+
+// ══════════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════════
+
+const modalEl=document.getElementById('modal');
+const maxExpand=document.getElementById('max-expand');
+
+function openModal(){
+  modalEl.querySelectorAll('.lvl-btn').forEach(b=>b.classList.toggle('active',b.dataset.level===curDiff));
+  maxExpand.classList.toggle('open',curDiff==='max');
+  modalEl.classList.add('visible');
+}
+function closeModal(){modalEl.classList.remove('visible');}
+
+document.getElementById('btn-max-level').addEventListener('click',()=>{
+  modalEl.querySelectorAll('.lvl-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-max-level').classList.add('active');
+  maxExpand.classList.add('open');
+});
+
+modalEl.querySelectorAll('.lvl-btn:not(#btn-max-level)').forEach(b=>{
+  b.addEventListener('click',()=>{
+    maxExpand.classList.remove('open');
+    closeModal();newGame(b.dataset.level);
+  });
+});
+
+const slider=document.getElementById('int-slider');
+const intDisp=document.getElementById('int-display');
+slider.addEventListener('input',()=>intDisp.textContent=slider.value+' intentos');
+
+document.getElementById('btn-gen-max').addEventListener('click',()=>{
+  closeModal();newGame('max',parseInt(slider.value));
+});
+
+document.getElementById('modal-cancel').addEventListener('click',closeModal);
+modalEl.addEventListener('click',e=>{if(e.target===modalEl)closeModal();});
+
+document.getElementById('btn-reset').addEventListener('click',openModal);
+document.getElementById('btn-check').addEventListener('click',check);
+document.getElementById('btn-hint').addEventListener('click',hint);
+
+// ══════════════════════════════════════════════
+//  MENSAJES
+// ══════════════════════════════════════════════
+
+function showMsg(t,type){
+  const el=document.getElementById('message');
+  el.textContent=t;el.className=type==='error'?'msg-error':'msg-ok';
+}
+function clearMsg(){const el=document.getElementById('message');el.textContent='';el.className='';}
+
+// ══════════════════════════════════════════════
+//  CONFETI
+// ══════════════════════════════════════════════
+
+function confetti(){
+  const cv=document.getElementById('confetti');
+  cv.style.display='block';const ctx=cv.getContext('2d');
+  cv.width=innerWidth;cv.height=innerHeight;
+  const pp=Array.from({length:130},()=>({
+    x:Math.random()*cv.width,y:-20-Math.random()*200,r:4+Math.random()*6,
+    d:1.2+Math.random()*2,
+    col:['#8b5e2a','#3a5fa0','#27ae60','#c0392b','#f39c12','#7d3c98'][0|Math.random()*6],
+    t:Math.random()*360,ts:(Math.random()-.5)*4
+  }));
+  let fr=0;
+  (function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pp.forEach(p=>{
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.t*Math.PI/180);
+      ctx.fillStyle=p.col;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.5);
+      ctx.restore();p.y+=p.d;p.t+=p.ts;if(p.y>cv.height+20)p.y=-20;
+    });
+    if(++fr<220)requestAnimationFrame(draw);
+    else{cv.style.display='none';ctx.clearRect(0,0,cv.width,cv.height);}
+  })();
+}
+
+// ══════════════════════════════════════════════
+//  ENCODE / DECODE  — base-7 → base-62, 17 chars
+//  Puzzle: 36 cells × {0..6} (0 = vacía)
+//  Espacio: 7^36 ≈ 3.4×10^30 → ceil(log62)=17
+// ══════════════════════════════════════════════
+
+const B62='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function encodePuzzle(puz){
+  let n=0n;
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++)n=n*7n+BigInt(puz[r][c]);
+  let s='';
+  for(let i=0;i<17;i++){s=B62[Number(n%62n)]+s;n/=62n;}
+  return s;
+}
+
+function decodePuzzle(code){
+  if(!code||code.length!==17)return null;
+  let n=0n;
+  for(const ch of code){const i=B62.indexOf(ch);if(i<0)return null;n=n*62n+BigInt(i);}
+  const flat=[];
+  for(let i=0;i<36;i++){flat.unshift(Number(n%7n));n/=7n;}
+  if(n!==0n)return null;
+  return Array.from({length:6},(_,r)=>flat.slice(r*6,r*6+6));
+}
+
+function isValidPuzzleGrid(puz){
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    const v=puz[r][c];
+    if(v<0||v>6)return false;
+    if(!v)continue;
+    for(let i=0;i<6;i++){if(i!==c&&puz[r][i]===v)return false;}
+    for(let i=0;i<6;i++){if(i!==r&&puz[i][c]===v)return false;}
+    const br=Math.floor(r/2)*2,bc=Math.floor(c/3)*3;
+    for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++){
+      const rr=br+dr,cc=bc+dc;
+      if(rr===r&&cc===c)continue;
+      if(puz[rr][cc]===v)return false;
+    }
+  }
+  return true;
+}
+
+function solvePuzzle(puz){
+  const g=copy(puz);
+  function bt(){
+    for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+      if(g[r][c])continue;
+      for(const v of [1,2,3,4,5,6]){
+        if(isValid(g,r,c,v)){g[r][c]=v;if(bt())return true;g[r][c]=0;}
+      }
+      return false;
+    }
+    return true;
+  }
+  return bt()?g:null;
+}
+
+function updateCodeInput(){
+  if(!PUZZLE)return;
+  const inp=document.getElementById('code-input');
+  inp.value=encodePuzzle(PUZZLE);
+  inp.classList.remove('invalid');
+}
+
+document.getElementById('btn-copy').addEventListener('click',()=>{
+  const inp=document.getElementById('code-input');
+  if(!inp.value||inp.value==='—')return;
+  navigator.clipboard.writeText(inp.value).catch(()=>{
+    // fallback for environments without clipboard API
+    inp.select();document.execCommand('copy');
+  });
+  const btn=document.getElementById('btn-copy');
+  const prev=btn.textContent;
+  btn.textContent='✓';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent=prev;btn.classList.remove('copied');},1400);
+});
+
+document.getElementById('btn-load').addEventListener('click',()=>{
+  const inp=document.getElementById('code-input');
+  const raw=inp.value.trim();
+  // Decode
+  const puz=decodePuzzle(raw);
+  if(!puz){inp.classList.add('invalid');showMsg('Código inválido — 17 chars base-62','error');return;}
+  // Validate structure
+  if(!isValidPuzzleGrid(puz)){inp.classList.add('invalid');showMsg('El código tiene conflictos de sudoku','error');return;}
+  // Solve & check uniqueness
+  const sol=solvePuzzle(puz);
+  if(!sol){inp.classList.add('invalid');showMsg('El puzzle no tiene solución','error');return;}
+  if(countSols(copy(puz),2)!==1){inp.classList.add('invalid');showMsg('El puzzle tiene múltiples soluciones','error');return;}
+  // Load
+  PUZZLE=puz;SOLUTION=sol;state=PUZZLE.map(r=>[...r]);selected=null;
+  curDiff='load';
+  document.getElementById('diff-label').textContent='Cargado';
+  document.getElementById('mp').classList.remove('visible');
+  document.getElementById('inline-status').innerHTML='';
+  inp.classList.remove('invalid');
+  renderGrid();
+  clearMsg();showMsg('Puzzle cargado desde código ✦','ok');
+});
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+newGame('medium');
+</script>
+</body>
+</html>
