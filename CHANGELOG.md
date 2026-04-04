@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-04
+
+### Added
+- **Update button** in the code row: encodes the current board state (including
+  user-filled cells) into a shareable code, with conflict validation before encoding.
+- Difficulty metrics panel now shown for all difficulty levels (Easy, Medium, Hard),
+  not only in Maximum mode.
+- Numeric difficulty score displayed in the NIVEL line alongside the band label
+  (e.g. `Fácil — Avanzado · 423`).
+- Metrics panel and score also calculated and shown when loading a puzzle from a code.
+
+### Changed
+- **Puzzle encoding rewritten**: replaced the naive base-7 → base-62 scheme (17 chars)
+  with a 70-bit two-payload architecture encoded in base-85 (Z85), producing
+  **11-character codes**.
+  - Payload 1 (36 bits): vacancy mask indicating which cells are clues.
+  - Payload 2 (~34 bits): clue values compressed via mixed-radix factoradic encoding
+    that exploits Sudoku constraints (dynamic-base accumulator over legal options).
+  - Z85 alphabet: `0–9 a–z A–Z . - : + = ^ ! / * ? & < > ( ) [ ] { } @ % $ #`
+- Confetti animation duration extended from ~3.7 s to ~7 s.
+- Removed the "6 × 6 — grupos de 2×3" subtitle from the page header.
+- Error message for invalid codes updated to reflect the new format (11 chars base-85).
+
 ## [1.0.2] - 2026-03-24
 
 ### Added
