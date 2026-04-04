@@ -1,6 +1,6 @@
 # Sudoku 6×6
 
-A clean, browser-based 6×6 Sudoku with 2×3 subgrids. No dependencies, no build step — just open the file. This entire project was built exclusively using Large Language Models; you can find more details about this AI-driven process in the Development section.
+A clean, browser-based 6×6 Sudoku with 2×3 subgrids. No dependencies, no build step — just open the file. This entire project was built mainly using Large Language Models; you can find more details about this AI-driven process in the Development section.
 
 **[▶ Play it live](https://alejandropu.github.io/claude-pair-sudoku/)**
 
@@ -89,10 +89,12 @@ This project was built entirely through AI pair programming:
 |---------|------|------|
 | 1.0.0 – 1.0.1 | Claude Sonnet 4.6 extended | Pair programming |
 | 1.0.0 – 1.0.1 | ChatGPT 5.4 extended thinking | Documentation |
-| 1.0.2 | Claude Code via Cursor 2.6.21 | Pair programming |
+| 1.0.2 | Claude Code v2.1.92 via Cursor 3.0.9 | Pair programming |
 | 1.1.0 | Gemini 3.1 Pro | Algorithm optimization |
 
 The full development story for v1.0.0–1.0.1 — every prompt, design decision, and technical discussion — is documented in [DEVLOG.md](DEVLOG.md).
+
+From v1.0.2 onwards, Claude Code via Cursor became the main tool used for development.
 
 ---
 
