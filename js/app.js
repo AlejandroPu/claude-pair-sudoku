@@ -260,12 +260,14 @@ async function newGame(diff,maxAttempts=1){
     searching=false;
     const band=getBand(bestScore);
     setStatus(`Mejor puzzle encontrado · ${maxAttempts} intento${maxAttempts!==1?'s':''}`);
-    document.getElementById('diff-label').textContent=`Máxima — ${band.label}`;
+    document.getElementById('diff-label').textContent=`Máxima — ${band.label} · ${bestScore}`;
     clearMsg();
 
   }else{
-    mp.classList.remove('visible');
+    mp.classList.add('visible');
     document.getElementById('inline-status').innerHTML='';
+    document.getElementById('mp-status').innerHTML='';
+    resetBars();
     showMsg('Generando…','ok');
     await new Promise(r=>setTimeout(r,30));
     const gen=generatePuzzle(diff);
@@ -273,8 +275,12 @@ async function newGame(diff,maxAttempts=1){
     state=PUZZLE.map(r=>[...r]);
     renderGrid();
     updateCodeInput();
+    const metrics=calcMetrics(PUZZLE);
+    const score=calcScore(metrics);
+    const band=getBand(score);
+    updateMP(metrics,score,1,1,true);
     document.getElementById('diff-label').textContent=
-      {easy:'Fácil',medium:'Medio',hard:'Difícil'}[diff];
+      `${{easy:'Fácil',medium:'Medio',hard:'Difícil'}[diff]} — ${band.label} · ${score}`;
     clearMsg();
   }
 }
@@ -508,35 +514,68 @@ function confetti(){
       ctx.fillStyle=p.col;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.5);
       ctx.restore();p.y+=p.d;p.t+=p.ts;if(p.y>cv.height+20)p.y=-20;
     });
-    if(++fr<220)requestAnimationFrame(draw);
+    if(++fr<420)requestAnimationFrame(draw);
     else{cv.style.display='none';ctx.clearRect(0,0,cv.width,cv.height);}
   })();
 }
 
 // ══════════════════════════════════════════════
-//  ENCODE / DECODE  — base-7 → base-62, 17 chars
-//  Puzzle: 36 cells × {0..6} (0 = vacía)
-//  Espacio: 7^36 ≈ 3.4×10^30 → ceil(log62)=17
+//  ENCODE / DECODE  — 70-bit → base-85 (Z85), 11 chars
+//  Payload 1 (36 bits): máscara de vacíos, 1=pista, 0=vacía, row-major
+//  Payload 2 (~34 bits): acumulador de base dinámica sobre las pistas
+//  Ensamble: bigNum = (acc << 36n) | vacancyMask  → 11 chars Z85
 // ══════════════════════════════════════════════
 
-const B62='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const Z85='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#';
 
 function encodePuzzle(puz){
-  let n=0n;
-  for(let r=0;r<6;r++)for(let c=0;c<6;c++)n=n*7n+BigInt(puz[r][c]);
+  // Payload 1: vacancy mask (row-major, bit i = r*6+c)
+  let mask=0n;
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(puz[r][c])mask|=(1n<<BigInt(r*6+c));
+
+  // Payload 2: dynamic-base factoradic over clue cells
+  const rows=[0,0,0,0,0,0],cols=[0,0,0,0,0,0],blks=[0,0,0,0,0,0];
+  let acc=0n,mult=1n;
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    const v=puz[r][c];if(!v)continue;
+    const b=Math.floor(r/2)*2+Math.floor(c/3);
+    const uni=[];
+    for(let x=1;x<=6;x++)if(!(rows[r]&(1<<x))&&!(cols[c]&(1<<x))&&!(blks[b]&(1<<x)))uni.push(x);
+    acc+=BigInt(uni.indexOf(v))*mult;
+    mult*=BigInt(uni.length);
+    rows[r]|=(1<<v);cols[c]|=(1<<v);blks[b]|=(1<<v);
+  }
+
+  // Assemble and encode as 11-char Z85
+  const big=(acc<<36n)|mask;
   let s='';
-  for(let i=0;i<17;i++){s=B62[Number(n%62n)]+s;n/=62n;}
+  let n=big;
+  for(let i=0;i<11;i++){s=Z85[Number(n%85n)]+s;n/=85n;}
   return s;
 }
 
 function decodePuzzle(code){
-  if(!code||code.length!==17)return null;
+  if(!code||code.length!==11)return null;
   let n=0n;
-  for(const ch of code){const i=B62.indexOf(ch);if(i<0)return null;n=n*62n+BigInt(i);}
-  const flat=[];
-  for(let i=0;i<36;i++){flat.unshift(Number(n%7n));n/=7n;}
-  if(n!==0n)return null;
-  return Array.from({length:6},(_,r)=>flat.slice(r*6,r*6+6));
+  for(const ch of code){const i=Z85.indexOf(ch);if(i<0)return null;n=n*85n+BigInt(i);}
+
+  const mask=n&0xFFFFFFFFFn;  // bottom 36 bits
+  let acc=n>>36n;
+
+  const rows=[0,0,0,0,0,0],cols=[0,0,0,0,0,0],blks=[0,0,0,0,0,0];
+  const puz=Array.from({length:6},()=>Array(6).fill(0));
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    if(!(mask&(1n<<BigInt(r*6+c))))continue;
+    const b=Math.floor(r/2)*2+Math.floor(c/3);
+    const uni=[];
+    for(let x=1;x<=6;x++)if(!(rows[r]&(1<<x))&&!(cols[c]&(1<<x))&&!(blks[b]&(1<<x)))uni.push(x);
+    const U=BigInt(uni.length);
+    const v=uni[Number(acc%U)];
+    acc/=U;
+    puz[r][c]=v;
+    rows[r]|=(1<<v);cols[c]|=(1<<v);blks[b]|=(1<<v);
+  }
+  return puz;
 }
 
 function isValidPuzzleGrid(puz){
@@ -578,6 +617,18 @@ function updateCodeInput(){
   inp.classList.remove('invalid');
 }
 
+document.getElementById('btn-update').addEventListener('click',()=>{
+  if(!state){showMsg('No hay puzzle activo','error');return;}
+  if(!isValidPuzzleGrid(state)){showMsg('El estado actual tiene conflictos','error');return;}
+  const inp=document.getElementById('code-input');
+  inp.value=encodePuzzle(state);
+  inp.classList.remove('invalid');
+  const btn=document.getElementById('btn-update');
+  const prev=btn.textContent;
+  btn.textContent='✓';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent=prev;btn.classList.remove('copied');},1400);
+});
+
 document.getElementById('btn-copy').addEventListener('click',()=>{
   const inp=document.getElementById('code-input');
   if(!inp.value||inp.value==='—')return;
@@ -596,7 +647,7 @@ document.getElementById('btn-load').addEventListener('click',()=>{
   const raw=inp.value.trim();
   // Decode
   const puz=decodePuzzle(raw);
-  if(!puz){inp.classList.add('invalid');showMsg('Código inválido — 17 chars base-62','error');return;}
+  if(!puz){inp.classList.add('invalid');showMsg('Código inválido — 11 chars base-85','error');return;}
   // Validate structure
   if(!isValidPuzzleGrid(puz)){inp.classList.add('invalid');showMsg('El código tiene conflictos de sudoku','error');return;}
   // Solve & check uniqueness
@@ -606,9 +657,15 @@ document.getElementById('btn-load').addEventListener('click',()=>{
   // Load
   PUZZLE=puz;SOLUTION=sol;state=PUZZLE.map(r=>[...r]);selected=null;
   curDiff='load';
-  document.getElementById('diff-label').textContent='Cargado';
-  document.getElementById('mp').classList.remove('visible');
+  const metrics=calcMetrics(PUZZLE);
+  const score=calcScore(metrics);
+  const band=getBand(score);
+  document.getElementById('mp').classList.add('visible');
+  document.getElementById('mp-status').innerHTML='';
   document.getElementById('inline-status').innerHTML='';
+  resetBars();
+  updateMP(metrics,score,1,1,true);
+  document.getElementById('diff-label').textContent=`Cargado — ${band.label} · ${score}`;
   inp.classList.remove('invalid');
   renderGrid();
   clearMsg();showMsg('Puzzle cargado desde código ✦','ok');
