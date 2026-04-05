@@ -2,6 +2,8 @@
 
 A clean, browser-based 6×6 Sudoku with 2×3 subgrids. No dependencies, no build step — just open the file. This entire project was built mainly using Large Language Models; you can find more details about this AI-driven process in the Development section.
 
+My main point of pride in this project is having proposed the board-encoding idea that was ultimately implemented, surpassing the alternatives suggested by Gemini and Claude. As of April 4, 2026, it stands as a small but meaningful example of human engineering judgment adding value even in a simple problem like this one.
+
 **[▶ Play it live](https://alejandropu.github.io/claude-pair-sudoku/)**
 
 ---
