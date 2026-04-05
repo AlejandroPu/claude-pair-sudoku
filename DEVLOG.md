@@ -145,6 +145,8 @@ This part records a technical exploration centered on the compression of 6 × 6 
 
 The analysis was carried out through a conversation between **Alejandro** and **Gemini 3.1 Pro** on **April 4, 2026**. It progressively moved from generic matrix compression toward domain-specific representations constrained by Sudoku rules, and later informed the algorithmic direction implemented for **v1.1.0** in pair programming with **Claude Code via Cursor**.
 
+The original Gemini conversation was not intended for public sharing and is therefore not reproduced here for privacy reasons.
+
 ## Technical record of a 6 × 6 Sudoku compression and encoding exploration, based on discussions with Gemini 3.1 Pro
 
 What follows is a third-person record of a technical exploration on how to represent a **6 × 6 Sudoku with 2 × 3 subgrids** using the smallest possible number of characters.
@@ -265,6 +267,8 @@ The most important progression was this:
 The conversation did not end with a single definitive perfect encoder. Instead, it clarified the trade-off landscape. The naive unconstrained model requires **17 Base64 characters**. A legality-aware theoretical limit reduces that to **11**. Alejandro’s static worst-case model for resolved boards plus a clue mask reaches **12 Base64 characters**, while remaining much simpler to implement. Once that same 70-bit design is serialized through **Base85**, it also reaches **11 visible characters**, which is why the output alphabet became a decisive engineering choice rather than a cosmetic detail.
 
 The unresolved frontier is therefore not only the solved board itself, but also the efficient representation of the visibility mask under useful design constraints. The implementation that followed chose not the mathematically purest encoder, but the most balanced one: simple enough to implement cleanly, dense enough to be practically elegant, and well aligned with the final Base85-oriented text representation.
+
+A final discussion on **April 4, 2026** later took place with **Claude** regarding the algorithm. In that discussion, Claude confirmed that the implemented algorithm was the best practical choice under the project’s constraints and explained the reasons for that conclusion. The conversation can be reviewed here: https://claude.ai/share/0b36f206-8b47-40e2-9717-6ecc04b472a9
 
 The implementation of the algorithm was carried out for **v1.1.0** of the application, in pair programming with **Claude Code via Cursor**.
 
