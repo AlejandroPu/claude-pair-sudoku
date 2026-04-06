@@ -380,6 +380,7 @@ function renderGrid(){
     cell.dataset.row=r;cell.dataset.col=c;
     const inp=document.createElement('input');
     inp.type='text';inp.inputMode='numeric';inp.maxLength=1;
+    inp.readOnly=given;
     inp.value=given?PUZZLE[r][c]:'';
     cell.appendChild(inp);
 	if(!given){
