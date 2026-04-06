@@ -65,7 +65,7 @@
 
 <!-- MAIN -->
 <header>
-  <h1>Sudoku</h1>
+  <h1>Sudoku 6x6</h1>
 </header>
 
 <div class="card">
@@ -82,21 +82,25 @@
   </div>
 
   <div class="actions">
-    <button class="btn btn-secondary" id="btn-hint">Pista</button>
     <button class="btn btn-primary"   id="btn-check">Verificar</button>
-    <button class="btn btn-secondary" id="btn-reset">Reiniciar</button>
+    <button class="btn btn-secondary" id="btn-hint">Pista</button>
+    <button class="btn btn-secondary" id="btn-reset">Nuevo Sudoku</button>
   </div>
 
   <div id="message"></div>
 
   <!-- CODE ROW -->
   <div class="code-row">
-    <span class="code-lbl">Código</span>
-    <input type="text" id="code-input" maxlength="11" spellcheck="false"
-           autocomplete="off" placeholder="—">
-    <button class="code-btn" id="btn-update">Update</button>
-    <button class="code-btn" id="btn-copy">Copy</button>
-    <button class="code-btn" id="btn-load">Load</button>
+    <div class="code-line1">
+      <span class="code-lbl">Código</span>
+      <input type="text" id="code-input" maxlength="11" spellcheck="false"
+             autocomplete="off" placeholder="—">
+    </div>
+    <div class="code-line2">
+      <button class="code-btn" id="btn-update">Update</button>
+      <button class="code-btn" id="btn-copy">Copy</button>
+      <button class="code-btn" id="btn-load">Load</button>
+    </div>
   </div>
 
   <!-- METRICS -->

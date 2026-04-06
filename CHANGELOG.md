@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-04-06
+
+### Fixed
+- Given (clue) cells are now rendered as `<span>` elements instead of `<input readOnly>`,
+  completely preventing any browser or device from editing them regardless of DOM manipulation
+  (supersedes the partial fix in 1.2.1).
+
+### Changed
+- Page title updated to **Sudoku 6x6**.
+- Action buttons reordered: first row shows Verificar + Pista; second row shows Nuevo Sudoku
+  (formerly Reiniciar).
+- Code section split into two lines: label + input on the first line, Update/Copy/Load buttons
+  centered on the second.
+- Grid numbers enlarged (`clamp(1.2rem, 4.5vw, 1.7rem)`) and set to `font-weight: 700` for
+  better readability on small screens.
+- Verify colors intensified: error red `#c0150b`, correct green `#2ecc71` (bright, contrasts
+  against dark digits rather than the background).
+
 ## [1.2.1] - 2026-04-06
 
 ### Fixed

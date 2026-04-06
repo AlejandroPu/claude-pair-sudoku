@@ -378,19 +378,22 @@ function renderGrid(){
     const cell=document.createElement('div');
     cell.className='cell'+(given?' given':'');
     cell.dataset.row=r;cell.dataset.col=c;
-    const inp=document.createElement('input');
-    inp.type='text';inp.inputMode='numeric';inp.maxLength=1;
-    inp.readOnly=given;
-    inp.value=given?PUZZLE[r][c]:'';
-    cell.appendChild(inp);
-	if(!given){
-		cell.addEventListener('click',()=>{selected={row:r,col:c};highlight();inp.focus();});
-		inp.addEventListener('input',()=>{
-			const ch=inp.value.replace(/[^1-6]/g,'').slice(-1);
-			inp.value='';
-			if(ch)enter(parseInt(ch)); else enter(0);
-		});
-	}
+    if(given){
+      const span=document.createElement('span');
+      span.textContent=PUZZLE[r][c];
+      cell.appendChild(span);
+    } else {
+      const inp=document.createElement('input');
+      inp.type='text';inp.inputMode='numeric';inp.maxLength=1;
+      inp.value='';
+      cell.appendChild(inp);
+      cell.addEventListener('click',()=>{selected={row:r,col:c};highlight();inp.focus();});
+      inp.addEventListener('input',()=>{
+        const ch=inp.value.replace(/[^1-6]/g,'').slice(-1);
+        inp.value='';
+        if(ch)enter(parseInt(ch)); else enter(0);
+      });
+    }
     gridEl.appendChild(cell);
   }
 }

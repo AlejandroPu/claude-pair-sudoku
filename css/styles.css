@@ -39,18 +39,18 @@ header p{color:var(--accent);font-size:.75rem;letter-spacing:.2em;text-transform
 .cell[data-row="3"]{border-bottom:2.5px solid var(--box)}
 .cell input{position:absolute;inset:0;width:100%;height:100%;border:none;
   background:transparent;text-align:center;font-family:'DM Mono',monospace;
-  font-size:clamp(1rem,3.5vw,1.4rem);font-weight:500;color:var(--user);
+  font-size:clamp(1.2rem,4.5vw,1.7rem);font-weight:700;color:var(--user);
   cursor:pointer;outline:none;caret-color:transparent}
-.cell.given input{color:var(--ink);cursor:default;pointer-events:none}
-.cell.error{background:#fde8e8}.cell.error input{color:var(--error)}
-.cell.correct input{color:var(--ok)}
+.cell.given span{font-family:'DM Mono',monospace;font-size:clamp(1.2rem,4.5vw,1.7rem);font-weight:700;color:var(--ink)}
+.cell.error{background:#fde8e8}.cell.error input{color:#c0150b}
+.cell.correct input{color:#2ecc71}
 
 /* ── SEARCH STATUS INLINE ── */
 .inline-status{text-align:center;min-height:unset;
   font-size:.75rem;color:var(--accent);letter-spacing:.07em}
 
 /* ── ACTIONS ── */
-.actions{display:flex;gap:.75rem;justify-content:center;margin-top:1.25rem}
+.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-top:1.25rem}
 .btn{padding:.55rem 1.4rem;border-radius:8px;border:1.5px solid var(--box);
   font-family:'DM Mono',monospace;font-size:.75rem;font-weight:500;
   letter-spacing:.05em;cursor:pointer;transition:all .15s}
@@ -64,9 +64,11 @@ header p{color:var(--accent);font-size:.75rem;letter-spacing:.2em;text-transform
 .msg-error{color:var(--error)}.msg-ok{color:var(--ok)}
 
 /* ── CODE ROW ── */
-.code-row{display:flex;align-items:center;gap:.45rem;margin-top:1.1rem;
+.code-row{display:flex;flex-direction:column;gap:.45rem;margin-top:1.1rem;
   padding:.7rem .9rem;background:var(--hi);border-radius:10px;
   border:1px solid var(--line)}
+.code-line1{display:flex;align-items:center;gap:.45rem;padding:0 .5rem}
+.code-line2{display:flex;gap:.45rem;justify-content:center}
 .code-lbl{font-size:.6rem;color:var(--accent);letter-spacing:.14em;
   text-transform:uppercase;white-space:nowrap;margin-right:.1rem}
 #code-input{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;
