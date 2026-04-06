@@ -46,8 +46,14 @@
       <div class="intensity-block">
         <label>Intentos de búsqueda</label>
         <div class="int-row">
-          <input type="range" id="int-slider" min="5" max="4000" step="5" value="20">
-          <span class="int-val" id="int-display">20 intentos</span>
+          <div class="int-field">
+            <input type="number" id="int-input" min="1" max="6000" step="1" value="20">
+            <span class="int-label">intentos</span>
+          </div>
+          <div class="int-field">
+            <input type="number" id="maxdiff-input" min="300" max="1000" step="1" value="500">
+            <span class="int-label">max dificultad</span>
+          </div>
         </div>
         <button class="btn-gen" id="btn-gen-max">Buscar puzzle →</button>
       </div>
@@ -70,7 +76,10 @@
 
   <div id="grid"></div>
 
-  <div class="inline-status" id="inline-status"></div>
+  <div class="status-row">
+    <div class="inline-status" id="inline-status"></div>
+    <button class="btn-stop" id="btn-stop" style="display:none">Detener</button>
+  </div>
 
   <div class="actions">
     <button class="btn btn-secondary" id="btn-hint">Pista</button>
