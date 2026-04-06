@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-06
+
+### Added
+- **Maximum mode: two numeric inputs** replace the former attempt slider:
+  - *Intentos* (1–6000): number of puzzles to generate and evaluate.
+  - *Max dificultad* (300–1000): upper bound on the accepted difficulty score.
+- Both inputs clamp to their valid range on blur.
+- **Stop button** appears inline next to the attempt counter while a search is running; clicking it ends the loop after the current attempt and keeps the best valid result found so far.
+- **Max-difficulty enforcement**: the search tracks the best puzzle whose score ≤ *max dificultad* separately from the overall best. At the end it restores that puzzle; if no attempt stayed within the limit, a Hard-level puzzle is generated as fallback.
+- The grid and metrics panel update in real time during the search, always reflecting the current best within-range puzzle (out-of-range results are never shown).
+- The *Nivel:* line updates on every iteration alongside the metrics panel.
+
+### Changed
+- Maximum mode search stops early only when the best within-range score reaches *max dificultad* exactly (previously stopped when the overall best reached the threshold).
+- All Spanish comments in `js/app.js` translated to English.
+
 ## [1.1.0] - 2026-04-04
 
 ### Added

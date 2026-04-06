@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-//  UTILIDADES
+//  UTILITIES
 // ══════════════════════════════════════════════
 
 const shuffle = a => {
@@ -27,7 +27,7 @@ const isSolved=g=>{for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(!g[r][c])return fa
 const copy=g=>g.map(r=>[...r]);
 
 // ══════════════════════════════════════════════
-//  GENERADOR DE SOLUCIÓN + PUZZLE
+//  SOLUTION + PUZZLE GENERATOR
 // ══════════════════════════════════════════════
 
 function fillGrid(g){
@@ -73,10 +73,10 @@ function generatePuzzle(mode){
 }
 
 // ══════════════════════════════════════════════
-//  SOLVER LÓGICO (para métricas)
+//  LOGIC SOLVER (for metrics)
 // ══════════════════════════════════════════════
 
-// Aplica una ronda de naked + hidden singles. Devuelve true si hubo cambio.
+// Applies one round of naked + hidden singles. Returns true if any change was made.
 function logicStep(g){
   let ch=false;
   for(let r=0;r<6;r++)for(let c=0;c<6;c++){
@@ -126,14 +126,14 @@ function solveDepth(g,depth){
 }
 
 // ══════════════════════════════════════════════
-//  CÁLCULO DE MÉTRICAS
+//  METRICS CALCULATION
 // ══════════════════════════════════════════════
 
 function calcMetrics(puz){
-  // P — pistas dadas
+  // P — given clues
   let P=0;for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(puz[r][c])P++;
 
-  // S — celdas resolubles por naked/hidden single (sin duplicados)
+  // S — cells solvable by naked/hidden single (no duplicates)
   const solv=new Set();
   for(let r=0;r<6;r++)for(let c=0;c<6;c++){
     if(puz[r][c])continue;
@@ -159,7 +159,7 @@ function calcMetrics(puz){
   }
   const S=solv.size;
 
-  // C, M — candidatos promedio y mínimo
+  // C, M — average and minimum candidates
   let tot=0,minC=6,emp=0;
   for(let r=0;r<6;r++)for(let c=0;c<6;c++){
     if(puz[r][c])continue;
@@ -169,24 +169,24 @@ function calcMetrics(puz){
   const C=emp?Math.round(tot/emp*10)/10:0;
   const M=emp?minC:0;
 
-  // D — profundidad de bifurcación
+  // D — branching depth
   const D=solveDepth(copy(puz),0).depth;
 
   return{P,S,D,C,M};
 }
 
 // ══════════════════════════════════════════════
-//  FÓRMULA DE PUNTUACIÓN
+//  SCORING FORMULA
 // ══════════════════════════════════════════════
 //
-//  Componente  Peso  Máx. aporte
-//  ─────────── ────  ──────────
-//  P (pistas)   0.8    160
-//  S (singles)  1.2    240
-//  D (bifurc.)  1.5    300
-//  C (cand.p.)  0.8    160
-//  M (cand.m.)  0.7    140
-//               Total: 1000
+//  Component   Weight  Max contrib
+//  ─────────── ──────  ───────────
+//  P (clues)    0.8      160
+//  S (singles)  1.2      240
+//  D (depth)    1.5      300
+//  C (avg cand) 0.8      160
+//  M (min cand) 0.7      140
+//               Total:  1000
 //
 // ══════════════════════════════════════════════
 
@@ -222,45 +222,75 @@ const BANDS=[
 const getBand=s=>BANDS.find(b=>s<=b.max)||BANDS[BANDS.length-1];
 
 // ══════════════════════════════════════════════
-//  ESTADO DEL JUEGO
+//  GAME STATE
 // ══════════════════════════════════════════════
 
-let curDiff='medium',SOLUTION,PUZZLE,state,selected,searching=false;
+let curDiff='medium',SOLUTION,PUZZLE,state,selected,searching=false,stopRequested=false;
 
-async function newGame(diff,maxAttempts=1){
+async function newGame(diff,maxAttempts=1,maxDiff=0){
   if(searching)return;
   curDiff=diff;selected=null;
   const mp=document.getElementById('mp');
 
   if(diff==='max'){
-    searching=true;
+    searching=true;stopRequested=false;
+    document.getElementById('btn-stop').style.display='inline-block';
     mp.classList.add('visible');
     showMsg('Buscando puzzle óptimo…','ok');
     setStatus('Iniciando búsqueda<span class="blink">…</span>');
     resetBars();
 
-    let best=null,bestScore=-1;
+    let best=null,bestScore=-1,bestWithin=null,bestWithinScore=-1,attReached=0;
     for(let att=1;att<=maxAttempts;att++){
+      attReached=att;
       const gen=generatePuzzle('max');
       const metrics=calcMetrics(gen.puzzle);
       const score=calcScore(metrics);
       const isBest=score>bestScore;
       if(isBest){
         bestScore=score;best={...gen,metrics,score};
-        SOLUTION=gen.solution;PUZZLE=gen.puzzle;
-        state=PUZZLE.map(r=>[...r]);
-        renderGrid();
-        updateCodeInput();
       }
-      updateMP(best.metrics,best.score,att,maxAttempts,isBest);
+      let isNewWithin=false;
+      if(score<=maxDiff&&score>bestWithinScore){
+        bestWithinScore=score;bestWithin={...gen,metrics,score};
+        SOLUTION=bestWithin.solution;PUZZLE=bestWithin.puzzle;
+        state=PUZZLE.map(r=>[...r]);
+        renderGrid();updateCodeInput();
+        isNewWithin=true;
+      }
+      const displayPuzzle=bestWithin||best;
+      updateMP(displayPuzzle.metrics,displayPuzzle.score,att,maxAttempts,bestWithin?isNewWithin:isBest);
+      const dispBand=getBand(displayPuzzle.score);
+      document.getElementById('diff-label').textContent=`Máxima — ${dispBand.label} · ${displayPuzzle.score}`;
       if(att<maxAttempts)setStatus(`Intento ${att} / ${maxAttempts}<span class="blink">…</span>`);
       await new Promise(r=>setTimeout(r,8));
+      if(stopRequested)break;
+      if(bestWithinScore===maxDiff)break;
     }
 
-    searching=false;
-    const band=getBand(bestScore);
-    setStatus(`Mejor puzzle encontrado · ${maxAttempts} intento${maxAttempts!==1?'s':''}`);
-    document.getElementById('diff-label').textContent=`Máxima — ${band.label} · ${bestScore}`;
+    searching=false;stopRequested=false;
+    document.getElementById('btn-stop').style.display='none';
+
+    if(bestWithin){
+      SOLUTION=bestWithin.solution;PUZZLE=bestWithin.puzzle;
+      state=PUZZLE.map(r=>[...r]);
+      renderGrid();updateCodeInput();
+      updateMP(bestWithin.metrics,bestWithin.score,attReached,maxAttempts,true);
+      const band=getBand(bestWithinScore);
+      setStatus(`Mejor puzzle encontrado · ${attReached} intento${attReached!==1?'s':''}`);
+      document.getElementById('diff-label').textContent=`Máxima — ${band.label} · ${bestWithinScore}`;
+    }else{
+      const gen=generatePuzzle('hard');
+      SOLUTION=gen.solution;PUZZLE=gen.puzzle;
+      state=PUZZLE.map(r=>[...r]);
+      renderGrid();updateCodeInput();
+      const metrics=calcMetrics(PUZZLE);
+      const score=calcScore(metrics);
+      const band=getBand(score);
+      updateMP(metrics,score,1,1,true);
+      setStatus(`Sin puzzle dentro del rango · generado nivel Difícil`);
+      document.getElementById('diff-label').textContent=`Difícil — ${band.label} · ${score}`;
+    }
     clearMsg();
 
   }else{
@@ -286,7 +316,7 @@ async function newGame(diff,maxAttempts=1){
 }
 
 // ══════════════════════════════════════════════
-//  ACTUALIZACIÓN DEL PANEL DE MÉTRICAS
+//  METRICS PANEL UPDATE
 // ══════════════════════════════════════════════
 
 function resetBars(){
@@ -303,7 +333,7 @@ function updateMP(m,score,att,max,isBest){
   const c=calcContribs(m);
   const band=getBand(score);
 
-  // Score numérico + badge
+  // Numeric score + badge
   document.getElementById('mp-score').textContent=score;
   const badge=document.getElementById('mp-badge');
   badge.textContent=band.label;
@@ -311,7 +341,7 @@ function updateMP(m,score,att,max,isBest){
   badge.style.color=band.color;
   badge.style.borderColor=band.color+'66';
 
-  // Filas de métricas
+  // Metric rows
   const rows=[
     {k:'P',val:`${m.P} dadas`,pts:c.P},
     {k:'S',val:`${m.S} cel.`, pts:c.S},
@@ -335,7 +365,7 @@ function setStatus(html){
 }
 
 // ══════════════════════════════════════════════
-//  TABLERO
+//  BOARD
 // ══════════════════════════════════════════════
 
 const gridEl=document.getElementById('grid');
@@ -411,7 +441,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // ══════════════════════════════════════════════
-//  VERIFICAR / PISTA
+//  CHECK / HINT
 // ══════════════════════════════════════════════
 
 function check(){
@@ -467,14 +497,25 @@ modalEl.querySelectorAll('.lvl-btn:not(#btn-max-level)').forEach(b=>{
   });
 });
 
-const slider=document.getElementById('int-slider');
-const intDisp=document.getElementById('int-display');
-slider.addEventListener('input',()=>intDisp.textContent=slider.value+' intentos');
+const intInput=document.getElementById('int-input');
+const maxdiffInput=document.getElementById('maxdiff-input');
+
+function clampInput(el,min,max){
+  el.addEventListener('blur',()=>{
+    const v=parseInt(el.value);
+    el.value=isNaN(v)?min:Math.max(min,Math.min(max,v));
+  });
+}
+clampInput(intInput,1,6000);
+clampInput(maxdiffInput,300,1000);
 
 document.getElementById('btn-gen-max').addEventListener('click',()=>{
-  closeModal();newGame('max',parseInt(slider.value));
+  const attempts=Math.max(1,Math.min(6000,parseInt(intInput.value)||1));
+  const maxDiff=Math.max(300,Math.min(1000,parseInt(maxdiffInput.value)||300));
+  closeModal();newGame('max',attempts,maxDiff);
 });
 
+document.getElementById('btn-stop').addEventListener('click',()=>{stopRequested=true;});
 document.getElementById('modal-cancel').addEventListener('click',closeModal);
 modalEl.addEventListener('click',e=>{if(e.target===modalEl)closeModal();});
 
@@ -483,7 +524,7 @@ document.getElementById('btn-check').addEventListener('click',check);
 document.getElementById('btn-hint').addEventListener('click',hint);
 
 // ══════════════════════════════════════════════
-//  MENSAJES
+//  MESSAGES
 // ══════════════════════════════════════════════
 
 function showMsg(t,type){
@@ -493,7 +534,7 @@ function showMsg(t,type){
 function clearMsg(){const el=document.getElementById('message');el.textContent='';el.className='';}
 
 // ══════════════════════════════════════════════
-//  CONFETI
+//  CONFETTI
 // ══════════════════════════════════════════════
 
 function confetti(){
@@ -521,9 +562,9 @@ function confetti(){
 
 // ══════════════════════════════════════════════
 //  ENCODE / DECODE  — 70-bit → base-85 (Z85), 11 chars
-//  Payload 1 (36 bits): máscara de vacíos, 1=pista, 0=vacía, row-major
-//  Payload 2 (~34 bits): acumulador de base dinámica sobre las pistas
-//  Ensamble: bigNum = (acc << 36n) | vacancyMask  → 11 chars Z85
+//  Payload 1 (36 bits): vacancy mask, 1=clue, 0=empty, row-major
+//  Payload 2 (~34 bits): dynamic-base accumulator over clue cells
+//  Assembly: bigNum = (acc << 36n) | vacancyMask  → 11 chars Z85
 // ══════════════════════════════════════════════
 
 const Z85='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#';
