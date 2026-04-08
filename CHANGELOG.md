@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-04-07
+
+### Fixed
+- Grid rows no longer collapse to minimal height when an entire row contains only
+  user-editable cells (no given clues). Root cause: `grid-template-rows` was missing
+  from `#grid`, so rows sized themselves by content; since user-cell `<input>` elements
+  are `position:absolute` they contributed no height to the implicit row. Fixed by adding
+  `grid-template-rows:repeat(6,1fr)` so all six rows always share the container height equally.
+
 ## [1.2.2] - 2026-04-06
 
 ### Fixed
