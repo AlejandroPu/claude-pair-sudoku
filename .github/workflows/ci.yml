@@ -1,0 +1,39 @@
+# CI is a SUPERSET of the local `npm run verify` command. This project has no
+# dependencies and no build step, so today the two run the same checks.
+#
+# The job name ("Check & test") is what branch protection would reference as a
+# required check. If you rename it, update any protection rule that names it.
+#
+# No dependency-audit job: there are no dependencies to audit. Add one the day
+# package.json gains any (which the project forbids by design).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # NO branch filter on purpose: `branches: [main]` would give a PR stacked on
+  # another PR's branch no CI at all, silently.
+  pull_request:
+
+jobs:
+  quality:
+    name: Check & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # These two are exactly what `npm run verify` runs locally. Same verdict.
+      - name: Syntax check
+        run: npm run check
+
+      - name: Test
+        run: npm run test

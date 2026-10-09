@@ -1,0 +1,13 @@
+{
+  "name": "claude-pair-sudoku",
+  "private": true,
+  "description": "6x6 Sudoku in vanilla HTML/CSS/JS. Scripts only: this project has no dependencies.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node --check js/app.js",
+    "test": "node --test",
+    "verify": "npm run check && npm run test"
+  }
+}
