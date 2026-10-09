@@ -2,3 +2,24 @@ _old/
 .vs/
 .DS_Store
 Thumbs.db
+
+# --- Colossus workflow ---------------------------------------------------------
+
+# env files (opt-in for committing if ever needed)
+.env*
+!.env.example
+
+# The project brain: strategy, roadmap, infra notes, handoff state.
+# Never committed — it is the private half of the project.
+.private/
+
+# The local undo backstop for .private/, CLAUDE.md, AGENTS.md and .claude/ — never pushed.
+.localgit/
+
+# Claude Code — per-user and runtime files.
+# NOTE: shared config IS tracked on purpose: .claude/settings.json,
+# .claude/lanes/ and .claude/agents/. An agent that cannot read its own lane
+# file is not in the workflow.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
