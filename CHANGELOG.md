@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-10-09
+
+### Fixed
+- Puzzle codes now always load back the same puzzle. The encoder used since v1.1.0
+  packed only the clue cells with no size limit and silently truncated the result to
+  11 characters: about one in six Easy codes, and a few Medium ones, decoded to a
+  different board or failed to load.
+- Loading an invalid code no longer fails silently; the decoder rejects any malformed
+  input with a message.
+
+### Changed
+- New code format: the solved board, encoded digit by digit across the six 2×3 boxes
+  with the real number of options at each step, plus the 36-bit clue mask — always 11
+  characters. Codes from earlier versions no longer load.
+- Code alphabet changed from Z85 to base64url (`A–Z a–z 0–9 - _`), safe inside a URL.
+- **Update** no longer encodes a game with wrong numbers; it asks to fix them first.
+
+### Added
+- Automated tests for the encoding (Node.js built-in test runner, no dependencies)
+  and a CI workflow running them on every pull request.
+
+### Docs
+- README: the encoding section rewritten, with the story of the defect and its fix;
+  Development table updated.
+- DEVLOG: Part III added (encoding audit and correction); note on Part II.
+
 ## [1.2.3] - 2026-04-07
 
 ### Fixed
