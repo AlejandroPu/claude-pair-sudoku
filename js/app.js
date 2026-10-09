@@ -565,108 +565,97 @@ function confetti(){
 }
 
 // ══════════════════════════════════════════════
-//  ENCODE / DECODE  — 70-bit → base-85 (Z85), 11 chars
-//  Payload 1 (36 bits): vacancy mask, 1=clue, 0=empty, row-major
-//  Payload 2 (~34 bits): dynamic-base accumulator over clue cells
-//  Assembly: bigNum = (acc << 36n) | vacancyMask  → 11 chars Z85
+//  ENCODE / DECODE  — solved grid walked digit by digit across the 2×3 boxes
+//  Payload 1 (36 bits): clue mask, 1=clue, 0=empty, row-major
+//  Payload 2 (<30 bits): mixed-radix accumulator, one step per (digit, box)
+//  Assembly: bigNum = (acc << 36n) | mask  → 66 bits → 11 chars base64url
 // ══════════════════════════════════════════════
 
-const Z85='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#';
+const B64URL='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
-function encodePuzzle(puz){
-  // Payload 1: vacancy mask (row-major, bit i = r*6+c)
+// Walk digits 1..6 (outer) over boxes 0..5 (inner). pick(cands) returns the chosen cell
+// index (0..35) among the legal ones, or -1 to abort. Returns the flat grid or null.
+function walkGrid(pick){
+  const g=new Array(36).fill(0);
+  for(let d=1;d<=6;d++){
+    const rows=new Set(),cols=new Set();
+    for(let b=0;b<6;b++){
+      const r0=Math.floor(b/2)*2,c0=(b%2)*3,cands=[];
+      for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++){
+        const r=r0+dr,c=c0+dc;
+        if(!g[r*6+c]&&!rows.has(r)&&!cols.has(c))cands.push(r*6+c);
+      }
+      if(!cands.length)return null;
+      const i=pick(cands,d);
+      if(i<0)return null;
+      g[i]=d;rows.add(Math.floor(i/6));cols.add(i%6);
+    }
+  }
+  return g;
+}
+
+// sol: complete solution; puz: same shape, 0 = hidden, every non-zero cell equal to sol
+function encodePuzzle(sol,puz){
   let mask=0n;
   for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(puz[r][c])mask|=(1n<<BigInt(r*6+c));
 
-  // Payload 2: dynamic-base factoradic over clue cells
-  const rows=[0,0,0,0,0,0],cols=[0,0,0,0,0,0],blks=[0,0,0,0,0,0];
+  const flat=sol.flat();
   let acc=0n,mult=1n;
-  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
-    const v=puz[r][c];if(!v)continue;
-    const b=Math.floor(r/2)*2+Math.floor(c/3);
-    const uni=[];
-    for(let x=1;x<=6;x++)if(!(rows[r]&(1<<x))&&!(cols[c]&(1<<x))&&!(blks[b]&(1<<x)))uni.push(x);
-    acc+=BigInt(uni.indexOf(v))*mult;
-    mult*=BigInt(uni.length);
-    rows[r]|=(1<<v);cols[c]|=(1<<v);blks[b]|=(1<<v);
-  }
+  walkGrid((cands,d)=>{
+    const i=cands.find(j=>flat[j]===d);
+    if(i===undefined)return -1;
+    acc+=BigInt(cands.indexOf(i))*mult;
+    mult*=BigInt(cands.length);
+    return i;
+  });
 
-  // Assemble and encode as 11-char Z85
-  const big=(acc<<36n)|mask;
-  let s='';
-  let n=big;
-  for(let i=0;i<11;i++){s=Z85[Number(n%85n)]+s;n/=85n;}
+  let s='',n=(acc<<36n)|mask;
+  for(let i=0;i<11;i++){s=B64URL[Number(n%64n)]+s;n/=64n;}
   return s;
 }
 
+// Never throws. Returns {solution,puzzle} or null (uniqueness is the caller's check).
 function decodePuzzle(code){
-  if(!code||code.length!==11)return null;
+  if(typeof code!=='string'||code.length!==11)return null;
   let n=0n;
-  for(const ch of code){const i=Z85.indexOf(ch);if(i<0)return null;n=n*85n+BigInt(i);}
+  for(const ch of code){const i=B64URL.indexOf(ch);if(i<0)return null;n=n*64n+BigInt(i);}
 
-  const mask=n&0xFFFFFFFFFn;  // bottom 36 bits
+  const mask=n&((1n<<36n)-1n);
   let acc=n>>36n;
-
-  const rows=[0,0,0,0,0,0],cols=[0,0,0,0,0,0],blks=[0,0,0,0,0,0];
-  const puz=Array.from({length:6},()=>Array(6).fill(0));
-  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
-    if(!(mask&(1n<<BigInt(r*6+c))))continue;
-    const b=Math.floor(r/2)*2+Math.floor(c/3);
-    const uni=[];
-    for(let x=1;x<=6;x++)if(!(rows[r]&(1<<x))&&!(cols[c]&(1<<x))&&!(blks[b]&(1<<x)))uni.push(x);
-    const U=BigInt(uni.length);
-    const v=uni[Number(acc%U)];
+  const g=walkGrid(cands=>{
+    const U=BigInt(cands.length);
+    const k=Number(acc%U);
     acc/=U;
-    puz[r][c]=v;
-    rows[r]|=(1<<v);cols[c]|=(1<<v);blks[b]|=(1<<v);
+    return cands[k];
+  });
+  if(!g||acc!==0n)return null;  // leftover payload: not a code we produce
+
+  const solution=[],puzzle=[];
+  for(let r=0;r<6;r++){
+    solution.push(g.slice(r*6,r*6+6));
+    puzzle.push(solution[r].map((v,c)=>(mask>>BigInt(r*6+c))&1n?v:0));
   }
-  return puz;
+  return{solution,puzzle};
 }
 
-function isValidPuzzleGrid(puz){
-  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
-    const v=puz[r][c];
-    if(v<0||v>6)return false;
-    if(!v)continue;
-    for(let i=0;i<6;i++){if(i!==c&&puz[r][i]===v)return false;}
-    for(let i=0;i<6;i++){if(i!==r&&puz[i][c]===v)return false;}
-    const br=Math.floor(r/2)*2,bc=Math.floor(c/3)*3;
-    for(let dr=0;dr<2;dr++)for(let dc=0;dc<3;dc++){
-      const rr=br+dr,cc=bc+dc;
-      if(rr===r&&cc===c)continue;
-      if(puz[rr][cc]===v)return false;
-    }
-  }
-  return true;
-}
-
-function solvePuzzle(puz){
-  const g=copy(puz);
-  function bt(){
-    for(let r=0;r<6;r++)for(let c=0;c<6;c++){
-      if(g[r][c])continue;
-      for(const v of [1,2,3,4,5,6]){
-        if(isValid(g,r,c,v)){g[r][c]=v;if(bt())return true;g[r][c]=0;}
-      }
-      return false;
-    }
-    return true;
-  }
-  return bt()?g:null;
+// true iff some filled cell of grid differs from the solution
+function hasWrongEntries(grid,sol){
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(grid[r][c]&&grid[r][c]!==sol[r][c])return true;
+  return false;
 }
 
 function updateCodeInput(){
   if(!PUZZLE)return;
   const inp=document.getElementById('code-input');
-  inp.value=encodePuzzle(PUZZLE);
+  inp.value=encodePuzzle(SOLUTION,PUZZLE);
   inp.classList.remove('invalid');
 }
 
 document.getElementById('btn-update').addEventListener('click',()=>{
   if(!state){showMsg('No hay puzzle activo','error');return;}
-  if(!isValidPuzzleGrid(state)){showMsg('El estado actual tiene conflictos','error');return;}
+  if(hasWrongEntries(state,SOLUTION)){showMsg('Hay números incorrectos. Corrígelos antes de actualizar el código.','error');return;}
   const inp=document.getElementById('code-input');
-  inp.value=encodePuzzle(state);
+  inp.value=encodePuzzle(SOLUTION,state);
   inp.classList.remove('invalid');
   const btn=document.getElementById('btn-update');
   const prev=btn.textContent;
@@ -691,16 +680,12 @@ document.getElementById('btn-load').addEventListener('click',()=>{
   const inp=document.getElementById('code-input');
   const raw=inp.value.trim();
   // Decode
-  const puz=decodePuzzle(raw);
-  if(!puz){inp.classList.add('invalid');showMsg('Código inválido — 11 chars base-85','error');return;}
-  // Validate structure
-  if(!isValidPuzzleGrid(puz)){inp.classList.add('invalid');showMsg('El código tiene conflictos de sudoku','error');return;}
-  // Solve & check uniqueness
-  const sol=solvePuzzle(puz);
-  if(!sol){inp.classList.add('invalid');showMsg('El puzzle no tiene solución','error');return;}
-  if(countSols(copy(puz),2)!==1){inp.classList.add('invalid');showMsg('El puzzle tiene múltiples soluciones','error');return;}
+  const dec=decodePuzzle(raw);
+  if(!dec){inp.classList.add('invalid');showMsg('Código inválido — 11 caracteres base64url','error');return;}
+  // A decoded code always carries a valid solution; the clues must still be unique
+  if(countSols(copy(dec.puzzle),2)!==1){inp.classList.add('invalid');showMsg('El puzzle tiene múltiples soluciones','error');return;}
   // Load
-  PUZZLE=puz;SOLUTION=sol;state=PUZZLE.map(r=>[...r]);selected=null;
+  PUZZLE=dec.puzzle;SOLUTION=dec.solution;state=PUZZLE.map(r=>[...r]);selected=null;
   curDiff='load';
   const metrics=calcMetrics(PUZZLE);
   const score=calcScore(metrics);
