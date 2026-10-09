@@ -81,7 +81,7 @@ Work through these in order. Flag what fails; stay silent on what passes.
 - Values that come from the user (the puzzle-code input, cell input) never reach
   `innerHTML` or an equivalent unescaped — use `textContent` or validate first.
 - `decodePuzzle` rejects malformed codes cleanly (wrong length, characters outside
-  the Z85 alphabet, an invalid board) instead of throwing or loading garbage.
+  the base64url alphabet, a dead-end walk) instead of throwing or loading garbage.
 
 ### 6. Code conventions
 
@@ -111,10 +111,10 @@ The subtle, high-value rules the tests may not cover yet:
 
 - **Puzzle uniqueness.** Every generated puzzle has exactly one solution — any change
   to `generatePuzzle`, `countSols` or clue removal must preserve the check.
-- **Shared codes keep working.** Puzzle codes are shared outside the repo. A change
-  to `encodePuzzle` / `decodePuzzle` or the Z85 alphabet that makes an existing code
-  decode differently is **MAJOR** unless the PR body says so explicitly and the
-  CHANGELOG records it as a breaking change. Encode → decode must round-trip.
+- **The code format is pinned.** A PR that changes a golden code in
+  `tests/codec.test.mjs` changes the format: **MAJOR** unless the PR body says so
+  and the CHANGELOG records it. Encode → decode must round-trip and `decodePuzzle`
+  never throws.
 - **Metrics and score stay consistent with the documented formula** in `CLAUDE.md` →
   "Difficulty and scoring". A change to weights, bands or a metric's meaning updates
   that section in the same PR.
@@ -144,7 +144,7 @@ Severities:
 
 - **BLOCK** — must fix before merge (secret leak, new dependency, CI bypass).
 - **MAJOR** — strongly recommend fixing before merge (leftover TODO or
-  `console.log`, unscoped PR, missing accessibility affordance, shared codes broken
+  `console.log`, unscoped PR, missing accessibility affordance, code format changed
   without notice, uniqueness no longer guaranteed).
 - **MINOR** — nice to fix but not blocking (style nits, docs drift).
 

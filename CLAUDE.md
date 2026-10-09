@@ -198,7 +198,7 @@ Organised in sections delimited by `// ══` banner comments — find them wit
 | MODAL                     | difficulty picker, expandable Maximum-mode panel                  |
 | MESSAGES                  | `showMsg`, `clearMsg`                                              |
 | CONFETTI                  | canvas animation on completion                                    |
-| ENCODE / DECODE           | Z85 11 chars, `encodePuzzle`, `decodePuzzle`, `updateCodeInput`    |
+| ENCODE / DECODE           | base64url 11 chars, `encodePuzzle`, `decodePuzzle`, `hasWrongEntries`, `updateCodeInput` |
 | INIT                      | `newGame('medium')`                                                |
 
 ### Global state
@@ -244,19 +244,29 @@ score = P*0.8 + S*1.2 + D*1.5 + C*0.8 + M*0.7   (max 1000)
 Bands: 0–150 Principiante · 151–350 Intermedio · 351–550 Avanzado ·
 551–750 Experto · 751–1000 Extremo.
 
-### Puzzle encoding (Z85, 11 chars)
+### Puzzle encoding (base64url, 11 chars)
 
-70 bits split in two payloads, encoded in base 85:
+The **solved** board is encoded, plus which cells are shown. 66 bits in two payloads:
 
-- **Payload 1 (36 bits):** vacancy mask — bit `i = r*6+c`, 1 = clue, 0 = empty.
-- **Payload 2 (~34 bits):** dynamic-base factorial accumulator — walks the clue
-  cells in row-major order, encoding each value by its legal candidates at that point.
-- **Assembly:** `bigNum = (acc << 36n) | vacancyMask` → 11 Z85 chars.
+- **Payload 1 (36 bits):** clue mask — bit `i = r*6+c`, 1 = shown, 0 = hidden. For
+  Update, shown = clues + the player's filled cells.
+- **Payload 2 (< 2^30):** the solution walked digit by digit (1..6) across the six 2×3
+  boxes (box `b` has top-left `(floor(b/2)*2, (b%2)*3)`, cells in row-major order).
+  Each step records which of the box's still-legal cells holds the digit, in a
+  mixed-radix accumulator whose base is that step's **real** candidate count (first
+  step least significant). The worst case over all 28,200,960 grids is 955,514,880 ≈
+  2^29.83, so it always fits; a static base table does not (it fails 19% of grids).
+- **Assembly:** `bigNum = (acc << 36n) | mask` → 11 chars, most significant first.
 
-Z85 alphabet: `0–9 a–z A–Z . - : + = ^ ! / * ? & < > ( ) [ ] { } @ % $ #`
+Alphabet (base64url, URL-safe): `A–Z a–z 0–9 - _`
 
-⚠️ Shared codes live outside the repo: a change to the encoding must keep
-already-shared codes decoding to the same puzzle, or say explicitly that it breaks them.
+`decodePuzzle` never throws: it returns `null` for a wrong length, a character outside
+the alphabet, a dead-end walk or leftover payload. Load still checks that the clues
+have a unique solution. Update refuses to encode when a filled cell differs from the
+solution.
+
+⚠️ The format is pinned by the golden codes in `tests/codec.test.mjs`. Changing one is
+a format change and must be deliberate (old codes stop decoding).
 
 ### HTML grid
 
