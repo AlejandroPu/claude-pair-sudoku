@@ -1,8 +1,8 @@
 # Sudoku 6×6
 
-A clean, browser-based 6×6 Sudoku with 2×3 subgrids. No dependencies, no build step — just open the file. This entire project was built mainly using Large Language Models; you can find more details about this AI-driven process in the Development section.
+A clean, browser-based 6×6 Sudoku with 2×3 subgrids. No dependencies, no build step — just open the file. This entire project was built with Large Language Models; you can find more details about this AI-driven process in the Development section.
 
-My main point of pride in this project is having proposed the board-encoding idea that was ultimately implemented, surpassing the alternatives suggested by Gemini and Claude. As of April 4, 2026, it stands as a small but meaningful example of human engineering judgment adding value even in a simple problem like this one.
+My main point of pride in this project is the board-encoding idea I proposed, which outperformed the alternatives suggested by Gemini and Claude. It was only implemented as designed in v1.3.0 (October 2026) — the story is told in [Puzzle codes](#puzzle-codes). It remains a small but meaningful example of human engineering judgment adding value even in a simple problem like this one, and of why that judgment has to include verifying the result.
 
 **[▶ Play it live](https://alejandropu.github.io/claude-pair-sudoku/)**
 
@@ -14,41 +14,42 @@ My main point of pride in this project is having proposed the board-encoding ide
 - **Maximum mode** — actively searches for the hardest possible puzzle using a configurable number of attempts (1–6000) and a max difficulty score (300–1000).
 - **Difficulty metrics panel** — scores each puzzle across five axes: given clues (P), direct moves (S), branching depth (D), average candidates (C), and minimum candidates (M), combined into a 0–1000 score
 - **Hint and Verify** — reveal a random cell or check the whole board; auto-verifies when the last cell is filled
-- **Puzzle codes** — every puzzle encodes to an ultra-compact ~11 to 12-character Base64/Z85 string you can copy, share, and load back
+- **Puzzle codes** — every puzzle, or a game in progress, encodes to an 11-character code you can copy, share, and load back
 - **Confetti** on completion
 
 ---
 
-## The Compression Algorithm (v1.1.0)
+## Puzzle codes
 
-In version 1.1.0, the puzzle encoding system was completely redesigned following an architectural discussion with **Gemini 3.1 Pro** on how to optimize data compression.
-
-Instead of relying on standard text compression or processor-heavy recursive
-backtracking, the game uses a custom **dynamic-base factoradic** algorithm. It packs
-any valid Sudoku state into a precise 70-bit payload, resulting in a string of just
-11 characters, achieving near-theoretical maximum compression while maintaining
-instantaneous runtime performance.
+Every puzzle — or a game in progress — can be shared as an **11-character code** such as `beZTi6xd_st`. Paste it into the **Código** field and press **Load** to restore it.
 
 ### How it works
-The 70-bit payload is divided into two layers:
 
-1. **The Clue Mask (36 bits):** A bitmask of the 36 cells in row-major order, where `1` represents a starting clue and `0` represents an empty cell.
+A code stores the **solved board** plus a **mask** of which cells are shown: 66 bits in total, written in base64url (`A–Z a–z 0–9 - _`, safe inside a URL).
 
-2. **The Clue Values (≤ 34 bits):** The clue cells are visited in row-major order. For each one, the encoder builds the list of values still legal at that position — given the row, column, and 2×3 block constraints already consumed — and records the **index** of the actual value within that list. These indices are packed into a single integer using a mixed-radix (factoradic) scheme: each digit's base equals the number of legal candidates at that cell, which varies dynamically from cell to cell. The decoder reconstructs the board by reversing the same traversal.
+1. **The solved board (under 30 bits).** The board is walked digit by digit, from 1 to 6, and each digit box by box across the six 2×3 boxes. At each step the encoder lists the cells of the box that are still free and not blocked by the same digit in their row or column, and records which of them holds the digit. These choices are packed into a single integer whose base at each step is the **real number of options** at that step.
+2. **The mask (36 bits).** One bit per cell: `1` = shown, `0` = empty.
 
-### Design note
+An exhaustive check over all 28,200,960 valid 6×6 boards shows that the first part never exceeds 955,514,880 (≈ 2^29.83), so every board, with any mask, fits in 11 characters. The decoder replays the same walk and rejects any string that is not a valid code; loading also checks that the shown cells have a unique solution. **Update** encodes the game in progress — clues plus your entries — and asks you to fix any wrong number first.
 
-The original design idea — proposed during the Gemini session and internally dubbed **O(1) Static Multiplier** — was to encode the **completed board** by placing each digit 1–6 across the six 2×3 blocks in turn, using a static worst-case multiplier array `[6, 3, 4, 2, 2, 1]` per block. The name reflects its key property: since the multipliers are fixed at compile time, encoding and decoding run in true O(1) time with no dynamic candidate counting. That model yields a ceiling of `288 × 240 × 192 × 108 × 8 × 1 = 11,466,178,560` combinations, which fits in 34 bits and informed the bit-budget estimate.
+### The story behind it
 
-The implementation by **Claude Code** instead applies the same mixed-radix principle directly over the **clue cells** in row-major order, using real per-cell candidate counts as the dynamic base. This approach handles partial boards natively — no separate full-solution step required — and reaches the same 34-bit ceiling in practice, since the product of actual candidate counts never exceeds the static worst-case bound.
+The number-by-box idea is mine. I proposed it in March 2026, in a design discussion with Gemini 3.1 Pro: encode the solved board one digit at a time across the boxes, using a table of worst-case options per box, and add the 36-bit mask — 70 bits, 11 characters in Z85.
+
+That is not what v1.1.0 shipped. The implementation prompt Gemini drafted at the end of that discussion described a different scheme — encoding only the clue cells, row by row — and Claude Code implemented that prompt faithfully. That scheme has no fixed size limit: with many clues the value overflowed the 11 characters and was silently truncated, so roughly one in six Easy codes did not load back the same puzzle. Two reviews on April 4, 2026 — a Claude chat and Gemini 3.8 Flash — judged the implementation correct; the Claude review mistook it for my design, and the *Design note* added to this README in v1.2.0 repeated that both had the same 34-bit ceiling.
+
+I made the mistake of not verifying, when it shipped in April, that the algorithm had been implemented as designed. In October 2026, while reusing the idea in LookThis.One Games — another project of mine, in a private repository, live at [cerebritos.cl/games](https://www.cerebritos.cl/games/) — a Claude Opus 5.5 session analyzed this repository and found the defect. Verifying it here also showed that my design needed one adjustment: my worst-case table underestimated the options for digit 5, so fixed multipliers would have failed on about 19% of boards. Counting the real options at each step solves it, and that is what v1.3.0 implements.
+
+These errors were found and corrected thanks to today's stronger models and my greater experience using them. The full technical record is in [DEVLOG.md](DEVLOG.md), Part III.
 
 ---
+
 ## How to play
 
-1. Click **Reiniciar** (Restart) and choose a difficulty level
+1. Click **Nuevo Sudoku** (New Sudoku) and choose a difficulty level
 2. Click a cell and type a number (1–6), or use the arrow keys to navigate
 3. Use **Pista** (Hint) for a free cell, **Verificar** (Check) to highlight errors
-4. Share your puzzle by copying the **Código** (Code) field and sending it to someone — they can paste it in and click **Load**
+4. Share your puzzle by copying the **Código** (Code) field and sending it to someone — they can paste it in and click **Load**. Click **Update** first to include your progress.
 
 ---
 
@@ -67,6 +68,11 @@ python -m http.server 5500
 # then open http://localhost:5500
 ```
 
+To run the tests (Node.js 22 or later, no dependencies to install):
+```bash
+npm test
+```
+
 ---
 
 ## Tech stack
@@ -77,6 +83,7 @@ python -m http.server 5500
 | Styles     | CSS3 (custom properties, animations) |
 | Logic      | Vanilla JavaScript (ES2020+)         |
 | Fonts      | Google Fonts — Playfair Display, DM Mono |
+| Tests      | Node.js built-in test runner         |
 | Build tool | None                                 |
 
 ### File structure
@@ -86,26 +93,32 @@ claude-pair-sudoku/
 ├── index.html       # markup
 ├── css/
 │   └── styles.css   # all styles
-└── js/
-    └── app.js       # all logic
+├── js/
+│   └── app.js       # all logic
+├── tests/           # encoding tests (npm test)
+└── package.json     # test scripts only — no dependencies
 ```
 
 ---
 
 ## Development
 
-This project was built entirely through AI pair programming:
+This project was built through AI pair programming:
 
 | Version | Tool | Role |
 |---------|------|------|
 | 1.0.0 – 1.0.1 | Claude Sonnet 4.6 extended | Pair programming |
-| 1.0.0 – 1.0.1 | ChatGPT 5.4 extended thinking | Documentation |
+| 1.0.0 – 1.1.0 | ChatGPT 5.4 extended thinking | Documentation |
 | 1.0.2 | Claude Code v2.1.92 via Cursor 3.0.9 | Pair programming |
-| 1.1.0 | Gemini 3.1 Pro | Algorithm optimization |
+| 1.1.0 | Gemini 3.1 Pro | Encoding design discussion |
+| 1.1.0 – 1.2.3 | Claude Code (Claude Sonnet 4.6) via Cursor | Pair programming |
+| 1.3.0 | Claude Opus 5.5 | Encoding defect report (from the LookThis.One Games project) |
+| 1.3.0 | Claude Code (Claude Opus 5.5) | Verification, planning and documentation |
+| 1.3.0 | Claude Code (Claude Sonnet 5.5) | Implementation and tests |
 
-The full development story for v1.0.0–1.0.1 — every prompt, design decision, and technical discussion — is documented in [DEVLOG.md](DEVLOG.md).
+[DEVLOG.md](DEVLOG.md) records the development story: Part I covers the initial build (v1.0.0–1.0.1), Part II the encoding design discussion behind v1.1.0, and Part III the audit and correction of the encoding in v1.3.0.
 
-From v1.0.2 onwards, Claude Code via Cursor became the main tool used for development.
+From v1.0.2 to v1.2.3, Claude Code via Cursor was the main development tool. Since v1.3.0, the project uses Claude Code in two separate sessions — one to plan, one to implement.
 
 ---
 
