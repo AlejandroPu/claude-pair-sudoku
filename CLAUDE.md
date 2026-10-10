@@ -171,9 +171,12 @@ fresh one.
 index.html        — markup only (no inline logic)
 css/styles.css    — all styles
 js/app.js         — all logic
+docs.html         — documentation page: markup only
+css/docs.css      — documentation page styles
+js/docs.js        — documentation page logic (Markdown renderer, routing)
 package.json      — check/test/verify scripts only; no dependencies
 CHANGELOG.md      — Keep a Changelog + semver
-DEVLOG.md         — pair-programming narrative (v1.0.0–1.0.1)
+DEVLOG.md         — development narrative, Parts I–III
 _old/             — earlier development versions (do not touch)
 ```
 
@@ -200,6 +203,17 @@ Organised in sections delimited by `// ══` banner comments — find them wit
 | CONFETTI                  | canvas animation on completion                                    |
 | ENCODE / DECODE           | base64url 11 chars, `encodePuzzle`, `decodePuzzle`, `hasWrongEntries`, `updateCodeInput` |
 | INIT                      | `newGame('medium')`                                                |
+
+### Documentation page (`docs.html`)
+
+Same split as the game (markup / `css/docs.css` / `js/docs.js`). On load it fetches
+`README.md`, `DEVLOG.md` and `CHANGELOG.md` from its own site and renders them with a
+small Markdown renderer; **the `.md` files are the only source of the text**. The
+release label comes from the first `## [x.y.z]` of the CHANGELOG; the DEVLOG is split
+into pages at its `# Part …` headings; routing is by URL hash (`#readme`, `#part-1…3`,
+or any heading id). `RULES` at the top of `js/docs.js` is where amber/blue accents are
+added or removed. `tests/docs.test.mjs` pins the colour counts per page and fails when
+a rule matches nothing — editing the docs or the rules means updating it deliberately.
 
 ### Global state
 

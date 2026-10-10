@@ -1,0 +1,85 @@
+/* Layout: one reading column on "paper", like the game's board. Blue = links, navigation and
+   the author's own words (the player's colour in the game); amber = notes, the story, conclusions. */
+:root {
+  --bg: #f5f0e8; --paper: #fdfaf4; --ink: #1a1208; --muted: #6e5f49; --line: #d9cbb0;
+  --box: #6b4f2a; --accent: #8b5e2a;
+  --blue: #3a5fa0; --blue-wash: #e8eef8;
+  --amber: #b07a1c; --amber-wash: #f7eedb;
+  --code-bg: #efe7d6;
+  --f-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --measure: 68ch;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17130d; --paper: #1f1a12; --ink: #f1e8d6; --muted: #b3a387; --line: #3d3324;
+    --box: #c9a46b; --accent: #d9a35c; --blue: #8fb0ea; --blue-wash: #1d2638;
+    --amber: #e0b45a; --amber-wash: #2c2414; --code-bg: #2a2318; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17130d; --paper: #1f1a12; --ink: #f1e8d6; --muted: #b3a387; --line: #3d3324;
+  --box: #c9a46b; --accent: #d9a35c; --blue: #8fb0ea; --blue-wash: #1d2638;
+  --amber: #e0b45a; --amber-wash: #2c2414; --code-bg: #2a2318; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.6; padding-inline: 16px; padding-block: 0 64px; }
+.wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 22px; }
+
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 2px solid var(--box); margin-inline: -16px; padding-inline: 16px; padding-block: 10px; }
+.top-in { max-width: 860px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; }
+.brand { font-family: var(--f-display); font-size: 19px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.top nav { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--f-mono); font-size: 13.5px; }
+.top nav a { color: var(--muted); text-decoration: none; padding-block: 2px; border-bottom: 2px solid transparent; }
+.top nav a:hover { color: var(--blue); }
+.top nav a[aria-current="page"] { color: var(--blue); border-bottom-color: var(--blue); }
+.top nav .sub { color: var(--muted); margin-left: 6px; }
+.top .play { margin-left: auto; font-family: var(--f-mono); font-size: 13px; color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+
+article.doc { background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--box); padding-inline: clamp(16px, 4vw, 44px); padding-block: 26px 36px; min-width: 0; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+.md h1, .md h2, .md h3, .md h4 { font-family: var(--f-display); line-height: 1.2; text-wrap: balance; scroll-margin-top: 70px; }
+.md h1 { font-size: clamp(28px, 5vw, 38px); margin: 6px 0 14px; }
+.md h2 { font-size: 24px; margin: 30px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--blue); display: inline-block; }
+.md h3 { font-size: 19px; margin: 20px 0 4px; }
+.md h4 { font-size: 17px; margin: 16px 0 4px; }
+.md p, .md li { max-width: var(--measure); }
+.md p { margin: 9px 0; }
+.md ul, .md ol { margin: 9px 0; padding-left: 1.4em; }
+.md li { margin: 4px 0; }
+.md li::marker { color: var(--blue); }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+.md a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.md code { font-family: var(--f-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+.md pre { font-family: var(--f-mono); font-size: 13.5px; line-height: 1.5; background: linear-gradient(90deg, var(--code-bg), transparent 80%); padding: 12px 14px; margin: 10px 0; overflow-x: auto; border-radius: 3px; }
+.md pre code { background: none; padding: 0; font-size: inherit; }
+.md blockquote { margin: 12px 0; padding: 6px 14px; border-left: 3px solid var(--blue); background: linear-gradient(90deg, var(--blue-wash), transparent 80%); }
+.md blockquote p { margin: 4px 0; }
+.md blockquote.note { border-left: 4px solid var(--blue); background: linear-gradient(90deg, var(--blue-wash), transparent 80%); padding: 8px 16px; }
+.md .tbl { overflow-x: auto; margin: 10px 0; }
+.md table { border-collapse: collapse; font-size: 15px; min-width: 100%; }
+.md th, .md td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.md th { font-family: var(--f-mono); font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.md { display: grid; gap: 0; }
+.md .blk { border-left: 4px solid; padding: 6px 4px 18px 18px; min-width: 0; }
+.md .blk.blue { border-left-color: var(--blue); background: linear-gradient(90deg, var(--blue-wash), transparent 75%); }
+.md .blk.amber { border-left-color: var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 75%); }
+.md .blk > :first-child { margin-top: 10px; }
+.md .blk h2 { border-bottom: 0; display: block; padding-bottom: 0; }
+.md .blk.blue blockquote:not(.note) { border-left-color: var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 80%), var(--paper); }
+.md .inset { margin: 10px 0; padding: 4px 16px; border-left: 4px solid var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 80%), var(--paper); }
+.md .inset > :first-child { margin-top: 6px; }
+.md .inset > :last-child { margin-bottom: 6px; }
+.md thead.amber-head tr { background: linear-gradient(90deg, var(--amber-wash), transparent 80%); }
+.md thead.amber-head th { background: none; color: var(--ink); border-bottom: 2px solid var(--amber); }
+.md thead.blue-head tr { background: linear-gradient(90deg, color-mix(in srgb, var(--blue) 24%, var(--paper)), transparent 80%); }
+.md thead.blue-head th { background: none; color: var(--ink); border-bottom: 2px solid var(--blue); }
+.pager { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 13.5px; }
+.pager a { color: var(--blue); text-decoration: none; }
+.pager a:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }

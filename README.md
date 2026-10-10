@@ -1,5 +1,7 @@
 # Sudoku 6×6
 
+*Read this documentation as a web page: [alejandropu.github.io/claude-pair-sudoku/docs.html](https://alejandropu.github.io/claude-pair-sudoku/docs.html)*
+
 A clean, browser-based 6×6 Sudoku with 2×3 subgrids. No dependencies, no build step — just open the file. This entire project was built with Large Language Models; you can find more details about this AI-driven process in the Development section.
 
 My main point of pride in this project is the board-encoding idea I proposed, which outperformed the alternatives suggested by Gemini and Claude. It was only implemented as designed in v1.3.0 (October 2026) — the story is told in [Puzzle codes](#puzzle-codes). It remains a small but meaningful example of human engineering judgment adding value even in a simple problem like this one, and of why that judgment has to include verifying the result.
@@ -40,7 +42,7 @@ That is not what v1.1.0 shipped. The implementation prompt Gemini drafted at the
 
 I made the mistake of not verifying, when it shipped in April, that the algorithm had been implemented as designed. In October 2026, while reusing the idea in LookThis.One Games — another project of mine, in a private repository, live at [cerebritos.cl/games](https://www.cerebritos.cl/games/) — a Claude Opus 5.5 session analyzed this repository and found the defect. Verifying it here also showed that my design needed one adjustment: my worst-case table underestimated the options for digit 5, so fixed multipliers would have failed on about 19% of boards. Counting the real options at each step solves it, and that is what v1.3.0 implements.
 
-These errors were found and corrected thanks to today's stronger models and my greater experience using them. The full technical record is in [DEVLOG.md](DEVLOG.md), Part III.
+These errors were found and corrected thanks to today's stronger models and my greater experience using them. The full technical record is in [DEVLOG.md, Part III](DEVLOG.md#part-iii--encoding-audit-and-correction-v130).
 
 ---
 
@@ -91,10 +93,13 @@ npm test
 ```
 claude-pair-sudoku/
 ├── index.html       # markup
+├── docs.html        # documentation page
 ├── css/
-│   └── styles.css   # all styles
+│   ├── styles.css   # all styles
+│   └── docs.css     # documentation page styles
 ├── js/
-│   └── app.js       # all logic
+│   ├── app.js       # all logic
+│   └── docs.js      # documentation page logic
 ├── tests/           # encoding tests (npm test)
 └── package.json     # test scripts only — no dependencies
 ```
