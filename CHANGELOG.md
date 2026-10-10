@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-10
+
+### Added
+- Documentation page (`docs.html`): the README and the three parts of the DEVLOG,
+  read from the repository's Markdown files and shown in the game's style. Linked
+  from the game footer ("Documentación") and from the top of the README.
+- Tests for the documentation renderer.
+
+### Docs
+- README: link to the documentation page; the link to DEVLOG Part III now opens
+  that part directly.
+
 ## [1.3.0] - 2026-10-09
 
 ### Fixed
