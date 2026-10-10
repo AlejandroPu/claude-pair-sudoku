@@ -70,7 +70,7 @@ article.doc { background: var(--paper); border: 1px solid var(--line); border-to
 .md .blk.amber { border-left-color: var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 75%); }
 .md .blk > :first-child { margin-top: 10px; }
 .md .blk h2 { border-bottom: 0; display: block; padding-bottom: 0; }
-.md .blk.blue blockquote:not(.note) { background: linear-gradient(90deg, var(--paper), transparent 80%); }
+.md .blk.blue blockquote:not(.note) { border-left-color: var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 80%), var(--paper); }
 .md .inset { margin: 10px 0; padding: 4px 16px; border-left: 4px solid var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 80%), var(--paper); }
 .md .inset > :first-child { margin-top: 6px; }
 .md .inset > :last-child { margin-bottom: 6px; }
