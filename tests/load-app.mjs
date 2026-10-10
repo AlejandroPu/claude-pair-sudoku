@@ -1,9 +1,7 @@
-// Loads the real, unmodified js/app.js into a node:vm context with an inert DOM stub
-// and returns the functions the tests need. Not a test file (no .test.mjs suffix).
+// Loads a real, unmodified script from js/ into a node:vm context with an inert DOM stub
+// and returns the top-level names the tests need. Not a test file (no .test.mjs suffix).
 import fs from 'node:fs';
 import vm from 'node:vm';
-
-const APP = new URL('../js/app.js', import.meta.url);
 
 // Recursive stub: any property -> stub, any call -> stub. `then` is undefined so an
 // `await` on it does not hang.
@@ -14,14 +12,17 @@ const stub = () => new Proxy(function () {}, {
   construct: () => stub(),
 });
 
-export function loadApp() {
+export function loadScript(file, names) {
   const ctx = vm.createContext({
     document: stub(),
     navigator: stub(),
     setTimeout: () => 0,
     clearTimeout: () => {},
     requestAnimationFrame: () => 0,
+    fetch: () => new Promise(() => {}), // never resolves: a page's boot does nothing
   });
-  new vm.Script(fs.readFileSync(APP, 'utf8'), { filename: 'js/app.js' }).runInContext(ctx);
-  return vm.runInContext('({encodePuzzle, decodePuzzle, hasWrongEntries, generatePuzzle, B64URL})', ctx);
+  new vm.Script(fs.readFileSync(new URL('../js/' + file, import.meta.url), 'utf8'), { filename: 'js/' + file }).runInContext(ctx);
+  return vm.runInContext('({' + names.join(', ') + '})', ctx);
 }
+
+export const loadApp = () => loadScript('app.js', ['encodePuzzle', 'decodePuzzle', 'hasWrongEntries', 'generatePuzzle', 'B64URL']);
