@@ -55,7 +55,7 @@ article.doc { background: var(--paper); border: 1px solid var(--line); border-to
 .md hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
 .md a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 .md code { font-family: var(--f-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
-.md pre { font-family: var(--f-mono); font-size: 13.5px; line-height: 1.5; background: var(--code-bg); padding: 12px 14px; margin: 10px 0; overflow-x: auto; border-radius: 3px; }
+.md pre { font-family: var(--f-mono); font-size: 13.5px; line-height: 1.5; background: linear-gradient(90deg, var(--code-bg), transparent 80%); padding: 12px 14px; margin: 10px 0; overflow-x: auto; border-radius: 3px; }
 .md pre code { background: none; padding: 0; font-size: inherit; }
 .md blockquote { margin: 12px 0; padding: 6px 14px; border-left: 3px solid var(--blue); background: linear-gradient(90deg, var(--blue-wash), transparent 80%); }
 .md blockquote p { margin: 4px 0; }
@@ -71,11 +71,13 @@ article.doc { background: var(--paper); border: 1px solid var(--line); border-to
 .md .blk > :first-child { margin-top: 10px; }
 .md .blk h2 { border-bottom: 0; display: block; padding-bottom: 0; }
 .md .blk.blue blockquote:not(.note) { background: linear-gradient(90deg, var(--paper), transparent 80%); }
-.md .inset { margin: 10px 0; padding: 4px 16px; border-left: 4px solid var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 80%); }
+.md .inset { margin: 10px 0; padding: 4px 16px; border-left: 4px solid var(--amber); background: linear-gradient(90deg, var(--amber-wash), transparent 80%), var(--paper); }
 .md .inset > :first-child { margin-top: 6px; }
 .md .inset > :last-child { margin-bottom: 6px; }
-.md thead.amber-head th { background: var(--amber-wash); color: var(--ink); border-bottom: 2px solid var(--amber); }
-.md thead.blue-head th { background: var(--blue-wash); color: var(--ink); border-bottom: 2px solid var(--blue); }
+.md thead.amber-head tr { background: linear-gradient(90deg, var(--amber-wash), transparent 80%); }
+.md thead.amber-head th { background: none; color: var(--ink); border-bottom: 2px solid var(--amber); }
+.md thead.blue-head tr { background: linear-gradient(90deg, var(--blue-wash), transparent 80%); }
+.md thead.blue-head th { background: none; color: var(--ink); border-bottom: 2px solid var(--blue); }
 .pager { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 13.5px; }
 .pager a { color: var(--blue); text-decoration: none; }
 .pager a:hover { text-decoration: underline; }
