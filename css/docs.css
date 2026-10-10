@@ -76,7 +76,7 @@ article.doc { background: var(--paper); border: 1px solid var(--line); border-to
 .md .inset > :last-child { margin-bottom: 6px; }
 .md thead.amber-head tr { background: linear-gradient(90deg, var(--amber-wash), transparent 80%); }
 .md thead.amber-head th { background: none; color: var(--ink); border-bottom: 2px solid var(--amber); }
-.md thead.blue-head tr { background: linear-gradient(90deg, var(--blue-wash), transparent 80%); }
+.md thead.blue-head tr { background: linear-gradient(90deg, color-mix(in srgb, var(--blue) 24%, var(--paper)), transparent 80%); }
 .md thead.blue-head th { background: none; color: var(--ink); border-bottom: 2px solid var(--blue); }
 .pager { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 13.5px; }
 .pager a { color: var(--blue); text-decoration: none; }
